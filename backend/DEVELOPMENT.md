@@ -13,6 +13,14 @@ source venv/bin/activate
 uvicorn app.main:app --reload --port 8000
 ```
 
+## Access
+
+| Service | URL |
+|---------|-----|
+| Backend API | http://localhost:8000 |
+| API Docs (Swagger) | http://localhost:8000/docs |
+| API Docs (ReDoc) | http://localhost:8000/redoc |
+
 ## Useful Commands
 
 ### Database

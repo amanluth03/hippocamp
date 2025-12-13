@@ -10,7 +10,11 @@ npm install
 npm run dev
 ```
 
-The app will be available at http://localhost:5173
+## Access
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
 
 ## Useful Commands
 
@@ -39,10 +43,10 @@ npm run lint
 
 ```
 src/
-├── components/     # Reusable UI components (coming soon)
-├── pages/          # Route pages (coming soon)
-├── hooks/          # Custom React hooks (coming soon)
-├── services/       # API client functions (coming soon)
+├── components/     # Reusable UI components
+├── pages/          # Route pages
+├── hooks/          # Custom React hooks
+├── services/       # API client functions
 ├── App.tsx         # Main app component
 ├── main.tsx        # Entry point
 └── index.css       # Global styles (Tailwind)

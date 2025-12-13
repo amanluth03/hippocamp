@@ -26,4 +26,35 @@ hippocamp/
 
 ## Development
 
-Setup instructions coming soon.
+### Quick Start
+
+```bash
+# One command to start everything:
+./start-dev.sh
+```
+
+Or start services manually:
+
+```bash
+# Terminal 1 - Database
+cd backend && docker-compose up -d
+
+# Terminal 2 - Backend
+cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
+
+# Terminal 3 - Frontend
+cd frontend && npm run dev
+```
+
+### Access the App
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| API Docs (Swagger) | http://localhost:8000/docs |
+
+### Stopping Services
+
+- **Frontend/Backend**: Press `Ctrl+C` in their terminals
+- **Database**: You can leave it running! Docker uses minimal resources when idle. Stop with `cd backend && docker-compose down` if needed.
