@@ -1,6 +1,7 @@
 import uuid
 import secrets
 from datetime import datetime, date
+from typing import Optional
 from sqlalchemy import String, DateTime, Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,8 +18,8 @@ class Event(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255))
-    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    event_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    event_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     invite_code: Mapped[str] = mapped_column(
         String(20), unique=True, index=True, default=generate_invite_code
@@ -43,4 +44,3 @@ class EventMember(Base):
     # Relationships
     event = relationship("Event", back_populates="members")
     user = relationship("User", back_populates="event_memberships")
-
