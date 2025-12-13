@@ -7,6 +7,10 @@ sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
 alembic==1.13.1
 
+# Authentication
+python-jose[cryptography]==3.3.0
+httpx==0.26.0
+
 # Environment variables
 python-dotenv==1.0.0
 
