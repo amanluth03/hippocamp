@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.api.auth import router as auth_router
+from app.api.events import router as events_router
 
 app = FastAPI(
     title="Hippo Campus API",
@@ -24,6 +25,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(events_router)
 
 
 @app.get("/")
