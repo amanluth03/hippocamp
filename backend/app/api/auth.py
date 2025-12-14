@@ -107,3 +107,34 @@ async def get_me(current_user: User = Depends(get_current_user)):
     """Get current authenticated user."""
     return current_user
 
+
+@router.get("/dev/login")
+async def dev_login(email: str, db: Session = Depends(get_db)):
+    """
+    DEV ONLY: Get a token for any registered user by email.
+    Bypasses Google OAuth for easier API testing.
+    
+    Usage: /auth/dev/login?email=your@email.com
+    """
+    # Only allow in debug mode
+    if not settings.DEBUG:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found",
+        )
+    
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found. Sign in with Google first to create your account.",
+        )
+    
+    token = create_access_token(user.id)
+    return {
+        "token": token,
+        "user": user.email,
+        "usage": "Copy the token and paste it in Swagger's Authorize button",
+    }
+

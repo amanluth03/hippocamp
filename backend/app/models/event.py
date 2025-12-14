@@ -19,6 +19,7 @@ class Event(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     event_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     invite_code: Mapped[str] = mapped_column(
