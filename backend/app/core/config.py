@@ -5,6 +5,9 @@ load_dotenv()
 
 
 class Settings:
+    # Environment
+    DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
+    
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",

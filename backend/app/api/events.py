@@ -13,15 +13,20 @@ from app.schemas.event import EventCreate, EventResponse, EventListResponse, Joi
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
-def get_event_with_counts(db: Session, event: Event) -> dict:
-    """Helper to get event data with member and photo counts."""
+def get_event_counts(db: Session, event_id) -> tuple:
+    """Helper to get member and photo counts for an event."""
     member_count = db.query(func.count(EventMember.id)).filter(
-        EventMember.event_id == event.id
+        EventMember.event_id == event_id
     ).scalar()
     photo_count = db.query(func.count(Photo.id)).filter(
-        Photo.event_id == event.id
+        Photo.event_id == event_id
     ).scalar()
-    
+    return member_count, photo_count
+
+
+def get_event_full_response(db: Session, event: Event) -> dict:
+    """Get full event data for EventResponse schema."""
+    member_count, photo_count = get_event_counts(db, event.id)
     return {
         "id": event.id,
         "name": event.name,
@@ -31,6 +36,20 @@ def get_event_with_counts(db: Session, event: Event) -> dict:
         "invite_code": event.invite_code,
         "created_by": event.created_by,
         "created_at": event.created_at,
+        "member_count": member_count,
+        "photo_count": photo_count,
+    }
+
+
+def get_event_list_response(db: Session, event: Event) -> dict:
+    """Get event data for EventListResponse schema (fewer fields)."""
+    member_count, photo_count = get_event_counts(db, event.id)
+    return {
+        "id": event.id,
+        "name": event.name,
+        "location": event.location,
+        "event_date": event.event_date,
+        "invite_code": event.invite_code,
         "member_count": member_count,
         "photo_count": photo_count,
     }
@@ -64,7 +83,7 @@ async def create_event(
     db.commit()
     db.refresh(event)
     
-    return get_event_with_counts(db, event)
+    return get_event_full_response(db, event)
 
 
 @router.get("", response_model=List[EventListResponse])
@@ -80,7 +99,7 @@ async def list_my_events(
     
     events = db.query(Event).filter(Event.id.in_(event_ids)).all()
     
-    return [get_event_with_counts(db, event) for event in events]
+    return [get_event_list_response(db, event) for event in events]
 
 
 @router.get("/{event_id}", response_model=EventResponse)
@@ -110,7 +129,7 @@ async def get_event(
             detail="You are not a member of this event",
         )
     
-    return get_event_with_counts(db, event)
+    return get_event_full_response(db, event)
 
 
 @router.post("/join/{invite_code}", response_model=JoinEventResponse)
@@ -137,7 +156,7 @@ async def join_event(
     if existing:
         return JoinEventResponse(
             message="You are already a member of this event",
-            event=EventResponse(**get_event_with_counts(db, event)),
+            event=EventResponse(**get_event_full_response(db, event)),
         )
     
     # Add as member
@@ -151,6 +170,6 @@ async def join_event(
     
     return JoinEventResponse(
         message="Successfully joined the event!",
-        event=EventResponse(**get_event_with_counts(db, event)),
+        event=EventResponse(**get_event_full_response(db, event)),
     )
 
