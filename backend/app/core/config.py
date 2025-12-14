@@ -29,6 +29,12 @@ class Settings:
     
     # Frontend
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    
+    # AWS S3
+    AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    AWS_REGION: str = os.getenv("AWS_REGION", "us-east-2")
+    S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "")
 
 
 settings = Settings()

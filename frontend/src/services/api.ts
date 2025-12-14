@@ -108,3 +108,57 @@ export async function joinEvent(token: string, inviteCode: string): Promise<{ me
   return response.json();
 }
 
+// Photos API
+
+export interface Photo {
+  id: string;
+  event_id: string;
+  uploaded_by: string;
+  url: string;
+  thumbnail_url?: string;
+  taken_at?: string;
+  uploaded_at: string;
+  is_memory: boolean;
+}
+
+export async function uploadPhoto(
+  token: string,
+  eventId: string,
+  file: File
+): Promise<Photo> {
+  const formData = new FormData();
+  formData.append("event_id", eventId);
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}/photos/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to upload photo");
+  }
+
+  return response.json();
+}
+
+export async function getEventPhotos(
+  token: string,
+  eventId: string
+): Promise<Photo[]> {
+  const response = await fetch(`${API_URL}/photos/event/${eventId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get photos");
+  }
+
+  return response.json();
+}
+

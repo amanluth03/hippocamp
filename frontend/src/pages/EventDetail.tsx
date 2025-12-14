@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Event, getEvent } from "../services/api";
+import { Event, getEvent, Photo, getEventPhotos, uploadPhoto } from "../services/api";
 
 interface EventDetailProps {
   token: string | null;
@@ -9,9 +9,13 @@ interface EventDetailProps {
 export function EventDetail({ token }: EventDetailProps) {
   const { eventId } = useParams<{ eventId: string }>();
   const [event, setEvent] = useState<Event | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [photosLoading, setPhotosLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!token || !eventId) {
@@ -49,6 +53,73 @@ export function EventDetail({ token }: EventDetailProps) {
       cancelled = true;
     };
   }, [token, eventId]);
+
+  // Load photos separately
+  useEffect(() => {
+    if (!token || !eventId || !event) {
+      return;
+    }
+
+    let cancelled = false;
+    setPhotosLoading(true);
+
+    async function loadPhotos() {
+      try {
+        const data = await getEventPhotos(token!, eventId!);
+        if (!cancelled) {
+          setPhotos(data);
+        }
+      } catch (err) {
+        console.error("Failed to load photos:", err);
+      } finally {
+        if (!cancelled) {
+          setPhotosLoading(false);
+        }
+      }
+    }
+
+    loadPhotos();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, eventId, event]);
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !token || !eventId) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      // Upload all selected files
+      const uploadPromises = Array.from(files).map((file) =>
+        uploadPhoto(token, eventId, file)
+      );
+      const newPhotos = await Promise.all(uploadPromises);
+      
+      // Add to photos list
+      setPhotos((prev) => [...newPhotos, ...prev]);
+      
+      // Update event photo count
+      if (event) {
+        setEvent({
+          ...event,
+          photo_count: event.photo_count + newPhotos.length,
+        });
+      }
+
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (err) {
+      setError("Failed to upload photos. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function copyInviteCode() {
     if (event) {
@@ -141,23 +212,59 @@ export function EventDetail({ token }: EventDetailProps) {
           </div>
         </div>
 
-        {/* Photos Section (placeholder for now) */}
+        {/* Photos Section */}
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold text-white">Photos</h2>
-            <button className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg transition-colors">
-              + Upload Photos
-            </button>
+            <div className="flex gap-2 items-center">
+              {uploading && (
+                <span className="text-gray-400 text-sm">Uploading...</span>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePhotoUpload}
+                className="hidden"
+                id="photo-upload"
+                disabled={uploading}
+              />
+              <label
+                htmlFor="photo-upload"
+                className={`px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg transition-colors cursor-pointer ${
+                  uploading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                + Upload Photos
+              </label>
+            </div>
           </div>
           
-          {event.photo_count === 0 ? (
+          {photosLoading ? (
+            <div className="text-center py-12 text-gray-400">
+              <p>Loading photos...</p>
+            </div>
+          ) : photos.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <p className="text-4xl mb-2">📷</p>
               <p>No photos yet. Be the first to upload!</p>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
-              <p>Photo gallery coming soon...</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="aspect-square bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
+                >
+                  <img
+                    src={photo.url}
+                    alt="Event photo"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
