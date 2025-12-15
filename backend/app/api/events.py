@@ -8,7 +8,7 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models import User, Event, EventMember, Photo
-from app.schemas.event import EventCreate, EventResponse, EventListResponse, JoinEventResponse, EventMemberResponse
+from app.schemas.event import EventCreate, EventUpdate, EventResponse, EventListResponse, JoinEventResponse, EventMemberResponse
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -128,6 +128,56 @@ async def get_event(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this event",
         )
+    
+    return get_event_full_response(db, event)
+
+
+@router.put("/{event_id}", response_model=EventResponse)
+async def update_event(
+    event_id: uuid.UUID,
+    event_data: EventUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update an event. Only admins can update."""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+    
+    # Check if user is an admin
+    membership = db.query(EventMember).filter(
+        EventMember.event_id == event_id,
+        EventMember.user_id == current_user.id,
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this event",
+        )
+    
+    if membership.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can edit this event",
+        )
+    
+    # Update fields if provided
+    if event_data.name is not None:
+        event.name = event_data.name
+    if event_data.description is not None:
+        event.description = event_data.description
+    if event_data.location is not None:
+        event.location = event_data.location
+    if event_data.event_date is not None:
+        event.event_date = event_data.event_date
+    
+    db.commit()
+    db.refresh(event)
     
     return get_event_full_response(db, event)
 
