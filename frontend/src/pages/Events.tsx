@@ -95,6 +95,12 @@ export function Events({ token }: EventsProps) {
             🦛 Hippo Campus
           </Link>
           <div className="flex gap-3">
+            <Link
+              to="/flashbacks"
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors flex items-center gap-2"
+            >
+              ✨ Flashbacks
+            </Link>
             <button
               onClick={() => setShowJoinModal(true)}
               className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors"
