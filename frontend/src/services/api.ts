@@ -253,3 +253,41 @@ export async function deletePhoto(
   }
 }
 
+// Flashbacks API
+
+export interface FlashbackPhoto {
+  id: string;
+  url: string;
+  uploaded_at: string;
+  years_ago: number;
+  event_id: string;
+  event_name: string;
+  uploader_name?: string;
+}
+
+export interface FlashbackGroup {
+  years_ago: number;
+  label: string;
+  photos: FlashbackPhoto[];
+}
+
+export interface FlashbacksResponse {
+  date: string;
+  has_flashbacks: boolean;
+  groups: FlashbackGroup[];
+}
+
+export async function getFlashbacks(token: string): Promise<FlashbacksResponse> {
+  const response = await fetch(`${API_URL}/flashbacks`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get flashbacks");
+  }
+
+  return response.json();
+}
+
