@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import extract
+from sqlalchemy import extract, or_, and_
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -50,7 +50,9 @@ async def get_flashbacks(
 ):
     """
     Get flashback photos for today.
-    Returns photos from previous years that were uploaded on this day.
+    Returns photos from previous years where either:
+    - The photo was uploaded on this day, OR
+    - The event occurred on this day
     """
     today = datetime.utcnow()
     current_month = today.month
@@ -62,25 +64,53 @@ async def get_flashbacks(
         EventMember.user_id == current_user.id
     ).subquery()
     
-    # Get photos from those events where month/day matches today, but from previous years
+    # Get photos where either:
+    # 1. Upload date matches today's month/day from previous years, OR
+    # 2. Event date matches today's month/day from previous years
     photos_with_events = db.query(Photo, Event, User).join(
         Event, Photo.event_id == Event.id
     ).join(
         User, Photo.uploaded_by == User.id
     ).filter(
         Photo.event_id.in_(user_event_ids),
-        extract('month', Photo.uploaded_at) == current_month,
-        extract('day', Photo.uploaded_at) == current_day,
-        extract('year', Photo.uploaded_at) < current_year,
+        or_(
+            # Match by upload date
+            and_(
+                extract('month', Photo.uploaded_at) == current_month,
+                extract('day', Photo.uploaded_at) == current_day,
+                extract('year', Photo.uploaded_at) < current_year,
+            ),
+            # Match by event date
+            and_(
+                Event.event_date.isnot(None),
+                extract('month', Event.event_date) == current_month,
+                extract('day', Event.event_date) == current_day,
+                extract('year', Event.event_date) < current_year,
+            ),
+        ),
     ).order_by(
         Photo.uploaded_at.desc()
     ).all()
     
-    # Group photos by years ago
+    # Group photos by years ago (use event_date if available, otherwise upload_at)
+    # Track seen photos to avoid duplicates
     groups_dict: dict[int, List[FlashbackPhoto]] = {}
+    seen_photo_ids: set = set()
     
     for photo, event, uploader in photos_with_events:
-        years_ago = current_year - photo.uploaded_at.year
+        # Skip duplicates (photo might match both conditions)
+        if photo.id in seen_photo_ids:
+            continue
+        seen_photo_ids.add(photo.id)
+        
+        # Determine years_ago - prefer event_date if it matches, otherwise use upload_at
+        if (event.event_date and 
+            event.event_date.month == current_month and 
+            event.event_date.day == current_day and
+            event.event_date.year < current_year):
+            years_ago = current_year - event.event_date.year
+        else:
+            years_ago = current_year - photo.uploaded_at.year
         
         flashback_photo = FlashbackPhoto(
             id=photo.id,
