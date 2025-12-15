@@ -25,6 +25,8 @@ class PhotoListResponse(BaseModel):
     url: str
     thumbnail_url: Optional[str] = None
     uploaded_at: datetime
+    uploader_name: str  # Name or email of the person who uploaded
+    uploader_email: str
 
     class Config:
         from_attributes = True

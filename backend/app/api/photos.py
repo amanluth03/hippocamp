@@ -84,8 +84,12 @@ async def list_event_photos(
     # Verify membership
     check_event_membership(db, event_id, current_user.id)
     
-    # Get photos
-    photos = db.query(Photo).filter(Photo.event_id == event_id).order_by(
+    # Get photos with uploader info
+    photos = db.query(Photo, User).join(
+        User, Photo.uploaded_by == User.id
+    ).filter(
+        Photo.event_id == event_id
+    ).order_by(
         Photo.uploaded_at.desc()
     ).all()
     
@@ -95,8 +99,10 @@ async def list_event_photos(
             url=s3_service.get_photo_url(photo.s3_key),
             thumbnail_url=None,
             uploaded_at=photo.uploaded_at,
+            uploader_name=user.name or user.email.split('@')[0],
+            uploader_email=user.email,
         )
-        for photo in photos
+        for photo, user in photos
     ]
 
 

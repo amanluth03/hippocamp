@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Event, getEvent, Photo, getEventPhotos, uploadPhoto } from "../services/api";
+import { PhotoModal } from "../components/PhotoModal";
 
 interface EventDetailProps {
   token: string | null;
@@ -15,6 +16,7 @@ export function EventDetail({ token }: EventDetailProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -126,6 +128,26 @@ export function EventDetail({ token }: EventDetailProps) {
       navigator.clipboard.writeText(event.invite_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  function handlePhotoClick(photo: Photo) {
+    setSelectedPhoto(photo);
+  }
+
+  function handleNextPhoto() {
+    if (!selectedPhoto) return;
+    const currentIndex = photos.findIndex((p) => p.id === selectedPhoto.id);
+    if (currentIndex < photos.length - 1) {
+      setSelectedPhoto(photos[currentIndex + 1]);
+    }
+  }
+
+  function handlePreviousPhoto() {
+    if (!selectedPhoto) return;
+    const currentIndex = photos.findIndex((p) => p.id === selectedPhoto.id);
+    if (currentIndex > 0) {
+      setSelectedPhoto(photos[currentIndex - 1]);
     }
   }
 
@@ -255,7 +277,8 @@ export function EventDetail({ token }: EventDetailProps) {
               {photos.map((photo) => (
                 <div
                   key={photo.id}
-                  className="aspect-square bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
+                  onClick={() => handlePhotoClick(photo)}
+                  className="group relative aspect-square bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                 >
                   <img
                     src={photo.url}
@@ -263,12 +286,44 @@ export function EventDetail({ token }: EventDetailProps) {
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
+                  {/* Overlay with uploader info */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                          {photo.uploader_name?.[0]?.toUpperCase() || photo.uploader_email?.[0]?.toUpperCase() || "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-medium truncate">
+                            {photo.uploader_name || photo.uploader_email || "Unknown"}
+                          </p>
+                          <p className="text-gray-300 text-xs">
+                            {new Date(photo.uploaded_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Photo Modal */}
+      {selectedPhoto && (
+        <PhotoModal
+          photo={selectedPhoto}
+          photos={photos}
+          onClose={() => setSelectedPhoto(null)}
+          onNext={handleNextPhoto}
+          onPrevious={handlePreviousPhoto}
+        />
+      )}
     </div>
   );
 }
