@@ -119,6 +119,8 @@ export interface Photo {
   taken_at?: string;
   uploaded_at: string;
   is_memory: boolean;
+  uploader_name?: string;
+  uploader_email?: string;
 }
 
 export async function uploadPhoto(
