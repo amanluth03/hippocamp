@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers, updateEvent, EventUpdate, deleteEvent } from "../services/api";
 import { PhotoModal } from "../components/PhotoModal";
+import { Spinner, LoadingScreen } from "../components/Spinner";
 
 interface EventDetailProps {
   token: string | null;
@@ -284,11 +285,7 @@ export function EventDetail({ token }: EventDetailProps) {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <p className="text-gray-400 text-xl">Loading event...</p>
-      </div>
-    );
+    return <LoadingScreen message="Loading event..." />;
   }
 
   if (error || !event) {
@@ -402,8 +399,9 @@ export function EventDetail({ token }: EventDetailProps) {
           </div>
           
           {photosLoading ? (
-            <div className="text-center py-12 text-gray-400">
-              <p>Loading photos...</p>
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Spinner size="md" />
+              <p className="text-gray-400">Loading photos...</p>
             </div>
           ) : photos.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
@@ -490,8 +488,9 @@ export function EventDetail({ token }: EventDetailProps) {
             {/* Members List */}
             <div className="flex-1 overflow-y-auto p-4">
               {membersLoading ? (
-                <div className="text-center py-8 text-gray-400">
-                  Loading members...
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <Spinner size="md" />
+                  <p className="text-gray-400">Loading members...</p>
                 </div>
               ) : members.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
