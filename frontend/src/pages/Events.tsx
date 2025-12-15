@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Event, getEvents, createEvent, joinEvent, EventCreate } from "../services/api";
+import { Spinner } from "../components/Spinner";
 
 interface EventsProps {
   token: string | null;
@@ -121,7 +122,10 @@ export function Events({ token }: EventsProps) {
 
         {/* Events Grid */}
         {loading ? (
-          <div className="text-center text-gray-400 py-12">Loading events...</div>
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Spinner size="lg" />
+            <p className="text-gray-400">Loading events...</p>
+          </div>
         ) : events.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-400 text-lg mb-4">No events yet</p>
