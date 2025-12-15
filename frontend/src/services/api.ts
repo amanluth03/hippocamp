@@ -108,6 +108,34 @@ export async function joinEvent(token: string, inviteCode: string): Promise<{ me
   return response.json();
 }
 
+export interface EventUpdate {
+  name?: string;
+  description?: string;
+  location?: string;
+  event_date?: string;
+}
+
+export async function updateEvent(
+  token: string,
+  eventId: string,
+  data: EventUpdate
+): Promise<Event> {
+  const response = await fetch(`${API_URL}/events/${eventId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update event");
+  }
+
+  return response.json();
+}
+
 // Event Members API
 
 export interface EventMember {

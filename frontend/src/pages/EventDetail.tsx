@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers } from "../services/api";
+import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers, updateEvent, EventUpdate } from "../services/api";
 import { PhotoModal } from "../components/PhotoModal";
 
 interface EventDetailProps {
@@ -16,7 +16,11 @@ export function EventDetail({ token }: EventDetailProps) {
   const [photosLoading, setPhotosLoading] = useState(false);
   const [membersLoading, setMembersLoading] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<EventUpdate>({});
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
@@ -215,6 +219,43 @@ export function EventDetail({ token }: EventDetailProps) {
     }
   }
 
+  function openEditModal() {
+    if (!event) return;
+    setEditForm({
+      name: event.name,
+      description: event.description || "",
+      location: event.location || "",
+      event_date: event.event_date || "",
+    });
+    setEditError(null);
+    setShowEditModal(true);
+  }
+
+  async function handleSaveEvent() {
+    if (!token || !eventId || !event) return;
+
+    setSaving(true);
+    setEditError(null);
+
+    try {
+      // Clean up empty strings to null/undefined for proper API handling
+      const cleanedData: EventUpdate = {
+        name: editForm.name?.trim() || undefined,
+        description: editForm.description?.trim() || undefined,
+        location: editForm.location?.trim() || undefined,
+        event_date: editForm.event_date || undefined,
+      };
+      
+      const updatedEvent = await updateEvent(token, eventId, cleanedData);
+      setEvent(updatedEvent);
+      setShowEditModal(false);
+    } catch (err) {
+      setEditError("Failed to update event. You may not have permission.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!token) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -256,7 +297,18 @@ export function EventDetail({ token }: EventDetailProps) {
 
         {/* Event Info Card */}
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 mb-6">
-          <h1 className="text-4xl font-bold text-white mb-4">{event.name}</h1>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <h1 className="text-4xl font-bold text-white">{event.name}</h1>
+            <button
+              onClick={openEditModal}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              title="Edit event"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+            </button>
+          </div>
           
           {event.description && (
             <p className="text-gray-300 mb-4">{event.description}</p>
@@ -466,6 +518,99 @@ export function EventDetail({ token }: EventDetailProps) {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Event Modal */}
+      {showEditModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowEditModal(false)}
+        >
+          <div
+            className="bg-slate-900 rounded-2xl border border-white/20 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <h2 className="text-xl font-semibold text-white">Edit Event</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-4">
+              {editError && (
+                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
+                  {editError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Event Name</label>
+                <input
+                  type="text"
+                  value={editForm.name || ""}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                  placeholder="Event name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Description</label>
+                <textarea
+                  value={editForm.description || ""}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none"
+                  placeholder="What's this event about?"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Location</label>
+                <input
+                  type="text"
+                  value={editForm.location || ""}
+                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                  placeholder="Where is it happening?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Date</label>
+                <input
+                  type="date"
+                  value={editForm.event_date || ""}
+                  onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 p-6 border-t border-white/10">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEvent}
+                disabled={saving || !editForm.name?.trim()}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl transition-colors disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
             </div>
           </div>
         </div>

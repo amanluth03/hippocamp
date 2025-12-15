@@ -12,6 +12,14 @@ class EventCreate(BaseModel):
     event_date: Optional[date] = None
 
 
+class EventUpdate(BaseModel):
+    """Schema for updating an event. All fields optional."""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    event_date: Optional[date] = None
+
+
 class EventResponse(BaseModel):
     """Schema for event responses."""
     id: uuid.UUID
