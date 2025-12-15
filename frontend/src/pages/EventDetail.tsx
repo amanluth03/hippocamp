@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers, updateEvent, EventUpdate } from "../services/api";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers, updateEvent, EventUpdate, deleteEvent } from "../services/api";
 import { PhotoModal } from "../components/PhotoModal";
 
 interface EventDetailProps {
@@ -9,6 +9,7 @@ interface EventDetailProps {
 
 export function EventDetail({ token }: EventDetailProps) {
   const { eventId } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
   const [event, setEvent] = useState<Event | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [members, setMembers] = useState<EventMember[]>([]);
@@ -19,6 +20,8 @@ export function EventDetail({ token }: EventDetailProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState<EventUpdate>({});
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -253,6 +256,22 @@ export function EventDetail({ token }: EventDetailProps) {
       setEditError("Failed to update event. You may not have permission.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteEvent() {
+    if (!token || !eventId) return;
+
+    setDeletingEvent(true);
+    setEditError(null);
+
+    try {
+      await deleteEvent(token, eventId);
+      navigate("/events");
+    } catch (err) {
+      setEditError("Failed to delete event. You may not have permission.");
+      setDeletingEvent(false);
+      setConfirmDeleteEvent(false);
     }
   }
 
@@ -593,6 +612,36 @@ export function EventDetail({ token }: EventDetailProps) {
                   onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
                 />
+              </div>
+
+              {/* Delete Event */}
+              <div className="pt-4 mt-4 border-t border-white/10">
+                {confirmDeleteEvent ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-red-300 text-sm">Delete this event and all photos?</span>
+                    <button
+                      onClick={handleDeleteEvent}
+                      disabled={deletingEvent}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {deletingEvent ? "Deleting..." : "Yes, Delete"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteEvent(false)}
+                      disabled={deletingEvent}
+                      className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteEvent(true)}
+                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-colors"
+                  >
+                    Delete Event
+                  </button>
+                )}
               </div>
             </div>
 

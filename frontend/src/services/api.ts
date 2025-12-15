@@ -136,6 +136,22 @@ export async function updateEvent(
   return response.json();
 }
 
+export async function deleteEvent(
+  token: string,
+  eventId: string
+): Promise<void> {
+  const response = await fetch(`${API_URL}/events/${eventId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete event");
+  }
+}
+
 // Event Members API
 
 export interface EventMember {

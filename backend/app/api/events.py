@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models import User, Event, EventMember, Photo
 from app.schemas.event import EventCreate, EventUpdate, EventResponse, EventListResponse, JoinEventResponse, EventMemberResponse
+from app.services.s3 import s3_service
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -180,6 +181,60 @@ async def update_event(
     db.refresh(event)
     
     return get_event_full_response(db, event)
+
+
+@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_event(
+    event_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete an event. Only admins can delete. This also deletes all photos and members."""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+    
+    # Check if user is an admin
+    membership = db.query(EventMember).filter(
+        EventMember.event_id == event_id,
+        EventMember.user_id == current_user.id,
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this event",
+        )
+    
+    if membership.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can delete this event",
+        )
+    
+    # Delete all photos from S3
+    photos = db.query(Photo).filter(Photo.event_id == event_id).all()
+    for photo in photos:
+        try:
+            s3_service.delete_photo(photo.s3_key)
+        except Exception:
+            pass  # Continue even if S3 delete fails
+    
+    # Delete all photos from database
+    db.query(Photo).filter(Photo.event_id == event_id).delete()
+    
+    # Delete all event members
+    db.query(EventMember).filter(EventMember.event_id == event_id).delete()
+    
+    # Delete the event
+    db.delete(event)
+    db.commit()
+    
+    return None
 
 
 @router.post("/join/{invite_code}", response_model=JoinEventResponse)
