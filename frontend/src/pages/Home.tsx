@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { User, getGoogleLoginUrl } from "../services/api";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 
 interface HomeProps {
   user: User | null;
@@ -8,6 +9,8 @@ interface HomeProps {
 }
 
 export function Home({ user, loading, onLogout }: HomeProps) {
+  const { isSupported, permission, requestPermission } = usePushNotifications();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Hero Section */}
@@ -84,6 +87,21 @@ export function Home({ user, loading, onLogout }: HomeProps) {
             >
               Sign out
             </button>
+
+            {/* Notification Permission */}
+            {isSupported && permission !== 'granted' && (
+              <button
+                onClick={requestPermission}
+                className="mt-4 flex items-center gap-2 text-purple-300 hover:text-purple-200 transition-colors text-sm"
+              >
+                🔔 Enable memory notifications
+              </button>
+            )}
+            {isSupported && permission === 'granted' && (
+              <p className="mt-4 text-green-400 text-sm flex items-center gap-2">
+                ✓ Notifications enabled
+              </p>
+            )}
           </div>
         ) : (
           <a
