@@ -8,7 +8,7 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models import User, Event, EventMember, Photo
-from app.schemas.event import EventCreate, EventResponse, EventListResponse, JoinEventResponse
+from app.schemas.event import EventCreate, EventResponse, EventListResponse, JoinEventResponse, EventMemberResponse
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -172,4 +172,55 @@ async def join_event(
         message="Successfully joined the event!",
         event=EventResponse(**get_event_full_response(db, event)),
     )
+
+
+@router.get("/{event_id}/members", response_model=List[EventMemberResponse])
+async def get_event_members(
+    event_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all members of an event. User must be a member to view."""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+    
+    # Check if user is a member
+    membership = db.query(EventMember).filter(
+        EventMember.event_id == event_id,
+        EventMember.user_id == current_user.id,
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this event",
+        )
+    
+    # Get all members with user info
+    members = db.query(EventMember, User).join(
+        User, EventMember.user_id == User.id
+    ).filter(
+        EventMember.event_id == event_id
+    ).order_by(
+        EventMember.role.desc(),  # admins first
+        EventMember.joined_at.asc()
+    ).all()
+    
+    return [
+        EventMemberResponse(
+            id=member.id,
+            user_id=user.id,
+            name=user.name,
+            email=user.email,
+            avatar_url=user.avatar_url,
+            role=member.role,
+            joined_at=member.joined_at,
+        )
+        for member, user in members
+    ]
 

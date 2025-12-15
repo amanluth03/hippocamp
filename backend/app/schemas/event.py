@@ -48,3 +48,17 @@ class JoinEventResponse(BaseModel):
     message: str
     event: EventResponse
 
+
+class EventMemberResponse(BaseModel):
+    """Schema for event member responses."""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: Optional[str] = None
+    email: str
+    avatar_url: Optional[str] = None
+    role: str  # "admin" or "member"
+    joined_at: datetime
+
+    class Config:
+        from_attributes = True
+
