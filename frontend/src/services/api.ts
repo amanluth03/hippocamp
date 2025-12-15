@@ -164,3 +164,19 @@ export async function getEventPhotos(
   return response.json();
 }
 
+export async function deletePhoto(
+  token: string,
+  photoId: string
+): Promise<void> {
+  const response = await fetch(`${API_URL}/photos/${photoId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete photo");
+  }
+}
+

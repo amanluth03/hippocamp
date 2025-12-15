@@ -135,3 +135,54 @@ async def get_photo(
         is_memory=photo.is_memory,
     )
 
+
+@router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_photo(
+    photo_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a photo. 
+    Only the uploader or an event admin can delete a photo.
+    """
+    photo = db.query(Photo).filter(Photo.id == photo_id).first()
+    
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found",
+        )
+    
+    # Check if user is uploader
+    is_uploader = photo.uploaded_by == current_user.id
+    
+    # Check if user is event admin
+    membership = db.query(EventMember).filter(
+        EventMember.event_id == photo.event_id,
+        EventMember.user_id == current_user.id,
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this event",
+        )
+    
+    is_admin = membership.role == "admin"
+    
+    if not is_uploader and not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the uploader or event admin can delete this photo",
+        )
+    
+    # Delete from S3
+    s3_service.delete_photo(photo.s3_key)
+    
+    # Delete from database
+    db.delete(photo)
+    db.commit()
+    
+    return None
+

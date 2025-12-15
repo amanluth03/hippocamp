@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Event, getEvent, Photo, getEventPhotos, uploadPhoto } from "../services/api";
+import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto } from "../services/api";
 import { PhotoModal } from "../components/PhotoModal";
 
 interface EventDetailProps {
@@ -147,6 +147,36 @@ export function EventDetail({ token }: EventDetailProps) {
     if (!selectedPhoto) return;
     const currentIndex = photos.findIndex((p) => p.id === selectedPhoto.id);
     if (currentIndex > 0) {
+      setSelectedPhoto(photos[currentIndex - 1]);
+    }
+  }
+
+  async function handleDeletePhoto(photoId: string) {
+    if (!token) return;
+    
+    await deletePhoto(token, photoId);
+    
+    // Update photos list
+    setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    
+    // Update event photo count
+    if (event) {
+      setEvent({
+        ...event,
+        photo_count: Math.max(0, event.photo_count - 1),
+      });
+    }
+    
+    // Close modal or navigate to next/prev photo
+    const currentIndex = photos.findIndex((p) => p.id === photoId);
+    if (photos.length <= 1) {
+      // No more photos, close modal
+      setSelectedPhoto(null);
+    } else if (currentIndex < photos.length - 1) {
+      // Navigate to next photo
+      setSelectedPhoto(photos[currentIndex + 1]);
+    } else {
+      // Navigate to previous photo
       setSelectedPhoto(photos[currentIndex - 1]);
     }
   }
@@ -322,6 +352,7 @@ export function EventDetail({ token }: EventDetailProps) {
           onClose={() => setSelectedPhoto(null)}
           onNext={handleNextPhoto}
           onPrevious={handlePreviousPhoto}
+          onDelete={handleDeletePhoto}
         />
       )}
     </div>

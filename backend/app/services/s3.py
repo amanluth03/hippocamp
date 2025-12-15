@@ -77,6 +77,28 @@ class S3Service:
         """Get the public URL for a photo."""
         return f"https://{self.bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
 
+    def delete_photo(self, s3_key: str) -> bool:
+        """
+        Delete a photo from S3.
+        
+        Args:
+            s3_key: The S3 key of the photo to delete
+            
+        Returns:
+            bool: True if deleted successfully
+        """
+        try:
+            self.s3_client.delete_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+            )
+            return True
+        except ClientError as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete photo: {str(e)}",
+            )
+
 
 # Singleton instance
 s3_service = S3Service()
