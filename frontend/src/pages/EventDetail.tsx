@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto } from "../services/api";
+import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers } from "../services/api";
 import { PhotoModal } from "../components/PhotoModal";
 
 interface EventDetailProps {
@@ -11,8 +11,11 @@ export function EventDetail({ token }: EventDetailProps) {
   const { eventId } = useParams<{ eventId: string }>();
   const [event, setEvent] = useState<Event | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [members, setMembers] = useState<EventMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [photosLoading, setPhotosLoading] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -86,6 +89,37 @@ export function EventDetail({ token }: EventDetailProps) {
       cancelled = true;
     };
   }, [token, eventId, event]);
+
+  // Load members when modal opens
+  useEffect(() => {
+    if (!token || !eventId || !showMembers) {
+      return;
+    }
+
+    let cancelled = false;
+    setMembersLoading(true);
+
+    async function loadMembers() {
+      try {
+        const data = await getEventMembers(token!, eventId!);
+        if (!cancelled) {
+          setMembers(data);
+        }
+      } catch (err) {
+        console.error("Failed to load members:", err);
+      } finally {
+        if (!cancelled) {
+          setMembersLoading(false);
+        }
+      }
+    }
+
+    loadMembers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, eventId, showMembers]);
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -239,9 +273,12 @@ export function EventDetail({ token }: EventDetailProps) {
                 📅 {new Date(event.event_date).toLocaleDateString()}
               </span>
             )}
-            <span className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMembers(true)}
+              className="flex items-center gap-2 hover:text-purple-300 transition-colors"
+            >
               👥 {event.member_count} members
-            </span>
+            </button>
             <span className="flex items-center gap-2">
               📸 {event.photo_count} photos
             </span>
@@ -354,6 +391,84 @@ export function EventDetail({ token }: EventDetailProps) {
           onPrevious={handlePreviousPhoto}
           onDelete={handleDeletePhoto}
         />
+      )}
+
+      {/* Members Modal */}
+      {showMembers && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowMembers(false)}
+        >
+          <div
+            className="bg-slate-900 rounded-2xl border border-white/20 w-full max-w-md max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <h2 className="text-xl font-semibold text-white">
+                Members ({event.member_count})
+              </h2>
+              <button
+                onClick={() => setShowMembers(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Members List */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {membersLoading ? (
+                <div className="text-center py-8 text-gray-400">
+                  Loading members...
+                </div>
+              ) : members.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No members found
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10"
+                    >
+                      {/* Avatar */}
+                      {member.avatar_url ? (
+                        <img
+                          src={member.avatar_url}
+                          alt={member.name || member.email}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          {(member.name?.[0] || member.email[0]).toUpperCase()}
+                        </div>
+                      )}
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">
+                          {member.name || member.email.split("@")[0]}
+                        </p>
+                        <p className="text-gray-400 text-sm truncate">
+                          {member.email}
+                        </p>
+                      </div>
+
+                      {/* Role Badge */}
+                      {member.role === "admin" && (
+                        <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full">
+                          Admin
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

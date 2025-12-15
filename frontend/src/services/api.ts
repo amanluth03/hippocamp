@@ -108,6 +108,35 @@ export async function joinEvent(token: string, inviteCode: string): Promise<{ me
   return response.json();
 }
 
+// Event Members API
+
+export interface EventMember {
+  id: string;
+  user_id: string;
+  name?: string;
+  email: string;
+  avatar_url?: string;
+  role: string;
+  joined_at: string;
+}
+
+export async function getEventMembers(
+  token: string,
+  eventId: string
+): Promise<EventMember[]> {
+  const response = await fetch(`${API_URL}/events/${eventId}/members`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get members");
+  }
+
+  return response.json();
+}
+
 // Photos API
 
 export interface Photo {
