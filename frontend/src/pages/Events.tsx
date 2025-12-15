@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Event, getEvents, createEvent, joinEvent, EventCreate } from "../services/api";
+import { Event, getEvents, createEvent, joinEvent, EventCreate, getFlashbacks, FlashbacksResponse } from "../services/api";
 import { Spinner } from "../components/Spinner";
 
 interface EventsProps {
@@ -13,6 +13,7 @@ export function Events({ token }: EventsProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [flashbacks, setFlashbacks] = useState<FlashbacksResponse | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -48,6 +49,23 @@ export function Events({ token }: EventsProps) {
     return () => {
       cancelled = true;
     };
+  }, [token]);
+
+  // Load flashbacks preview
+  useEffect(() => {
+    if (!token) return;
+
+    async function loadFlashbacks() {
+      try {
+        const data = await getFlashbacks(token!);
+        setFlashbacks(data);
+      } catch (err) {
+        // Silently fail - flashbacks are optional
+        console.error("Failed to load flashbacks:", err);
+      }
+    }
+
+    loadFlashbacks();
   }, [token]);
 
   async function handleCreateEvent(data: EventCreate): Promise<string | null> {
@@ -124,6 +142,50 @@ export function Events({ token }: EventsProps) {
               Dismiss
             </button>
           </div>
+        )}
+
+        {/* Flashback Preview Banner */}
+        {flashbacks?.has_flashbacks && (
+          <Link
+            to="/flashbacks"
+            className="block mb-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl p-6 border border-purple-400/30 hover:border-purple-400/50 transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-4xl">✨</div>
+                <div>
+                  <h3 className="text-xl font-semibold text-white">
+                    You have memories from {flashbacks.date}!
+                  </h3>
+                  <p className="text-purple-300">
+                    {flashbacks.groups.reduce((sum, g) => sum + g.photos.length, 0)} photos from{" "}
+                    {flashbacks.groups.length === 1
+                      ? flashbacks.groups[0].label
+                      : `${flashbacks.groups.length} different years`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Preview thumbnails */}
+                <div className="hidden md:flex -space-x-3">
+                  {flashbacks.groups
+                    .flatMap((g) => g.photos)
+                    .slice(0, 3)
+                    .map((photo) => (
+                      <img
+                        key={photo.id}
+                        src={photo.url}
+                        alt="Memory preview"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-purple-500"
+                      />
+                    ))}
+                </div>
+                <span className="text-purple-300 group-hover:text-white transition-colors">
+                  View →
+                </span>
+              </div>
+            </div>
+          </Link>
         )}
 
         {/* Events Grid */}
