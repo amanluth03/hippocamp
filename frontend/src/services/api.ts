@@ -1,4 +1,8 @@
-const API_URL = "http://localhost:8000";
+// Use the same host as the frontend, but port 8000 for the API
+// This allows testing on mobile devices over the network
+const API_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:8000"
+  : `http://${window.location.hostname}:8000`;
 
 export interface User {
   id: string;

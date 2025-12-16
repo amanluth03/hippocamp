@@ -6,6 +6,7 @@ import { Events } from "./pages/Events";
 import { EventDetail } from "./pages/EventDetail";
 import { Flashbacks } from "./pages/Flashbacks";
 import { Memories } from "./pages/Memories";
+import { DevLogin } from "./pages/DevLogin";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function App() {
@@ -38,6 +39,10 @@ function App() {
           <Route
             path="/memories"
             element={<Memories token={token} />}
+          />
+          <Route
+            path="/dev/login"
+            element={<DevLogin onLogin={login} />}
           />
         </Routes>
       </BrowserRouter>

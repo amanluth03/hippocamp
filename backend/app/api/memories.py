@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models import User, Event, EventMember, Memory
+from app.models import User, Event, EventMember, Memory, Photo
 from app.schemas.memory import MemoryResponse, MemoryListResponse
 from app.services.s3 import s3_service
 
@@ -47,6 +47,7 @@ async def upload_memory(
     """
     Upload a photo to personal memories.
     Optionally link it to an event (user must be a member of that event).
+    When linked to an event, the photo also appears in that event's gallery.
     """
     # If linking to an event, verify membership
     if event_id:
@@ -62,6 +63,16 @@ async def upload_memory(
         s3_key=s3_key,
     )
     db.add(memory)
+    
+    # If linked to an event, also create a Photo record so it shows in event gallery
+    if event_id:
+        photo = Photo(
+            event_id=event_id,
+            uploaded_by=current_user.id,
+            s3_key=s3_key,  # Reuse the same S3 key
+        )
+        db.add(photo)
+    
     db.commit()
     db.refresh(memory)
     

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, getGoogleLoginUrl } from "../services/api";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 
@@ -8,88 +8,107 @@ interface HomeProps {
   onLogout: () => void;
 }
 
+// Check if we're on a mobile/network device (not localhost)
+const isNetworkAccess = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+
 export function Home({ user, loading, onLogout }: HomeProps) {
   const { isSupported, permission, requestPermission } = usePushNotifications();
+  const navigate = useNavigate();
+
+  const handleSignIn = () => {
+    if (isNetworkAccess) {
+      // On mobile/network, redirect to dev login
+      navigate("/dev/login");
+    } else {
+      // On localhost, use Google OAuth
+      window.location.href = getGoogleLoginUrl();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Hero Section */}
-      <div className="flex flex-col items-center justify-center min-h-screen px-4">
-        {/* Logo/Title */}
-        <div className="text-center mb-12">
-          <h1 className="text-6xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 mb-4">
+      {/* Scrollable content */}
+      <div className="min-h-screen overflow-y-auto px-4 py-8 pt-safe pb-safe">
+        {/* Logo/Title - Compact on mobile */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 mb-2">
             🦛 Hippo Campus
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto">
-            Capture moments. Share memories. Relive the magic.
+          <p className="text-base sm:text-lg md:text-xl text-gray-300">
+            Capture moments. Share memories.
           </p>
         </div>
 
-        {/* Feature Cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="text-4xl mb-4">📸</div>
-            <h3 className="text-xl font-semibold text-white mb-2">Event Albums</h3>
-            <p className="text-gray-400">
-              Create shared albums for parties, trips, and gatherings. Everyone can contribute.
+        {/* Feature Cards - Horizontal scroll on mobile */}
+        <div className="flex gap-3 overflow-x-auto pb-4 mb-6 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:overflow-visible sm:max-w-4xl sm:mx-auto">
+          <div className="flex-shrink-0 w-[70vw] sm:w-auto snap-center bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
+            <div className="text-2xl mb-2">📸</div>
+            <h3 className="text-base font-semibold text-white mb-1">Event Albums</h3>
+            <p className="text-gray-400 text-sm">
+              Shared albums for parties and gatherings.
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="text-4xl mb-4">✨</div>
-            <h3 className="text-xl font-semibold text-white mb-2">Flashbacks</h3>
-            <p className="text-gray-400">
-              Relive your favorite moments with daily memory notifications.
+          <div className="flex-shrink-0 w-[70vw] sm:w-auto snap-center bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
+            <div className="text-2xl mb-2">✨</div>
+            <h3 className="text-base font-semibold text-white mb-1">Flashbacks</h3>
+            <p className="text-gray-400 text-sm">
+              Relive moments with memory notifications.
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="text-4xl mb-4">🔗</div>
-            <h3 className="text-xl font-semibold text-white mb-2">Easy Sharing</h3>
-            <p className="text-gray-400">
-              Invite friends with a simple link. No app download required.
+          <div className="flex-shrink-0 w-[70vw] sm:w-auto snap-center bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
+            <div className="text-2xl mb-2">🔗</div>
+            <h3 className="text-base font-semibold text-white mb-1">Easy Sharing</h3>
+            <p className="text-gray-400 text-sm">
+              Invite friends with a link. No app needed.
             </p>
           </div>
         </div>
 
         {/* Auth Section */}
         {loading ? (
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-gray-400 text-center">Loading...</div>
         ) : user ? (
           <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-wrap justify-center gap-4">
+            {/* User info */}
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-lg rounded-full px-4 py-2 border border-white/20">
+              {user.avatar_url && (
+                <img
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full"
+                />
+              )}
+              <span className="text-white text-sm font-medium">{user.name}</span>
+            </div>
+
+            {/* Navigation buttons - always visible */}
+            <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
               <Link
                 to="/events"
-                className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                className="bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-full text-center shadow-lg"
               >
-                View My Events
+                📅 My Events
               </Link>
               <Link
                 to="/memories"
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-indigo-500/25"
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-full text-center shadow-lg"
               >
                 📸 My Memories
               </Link>
               <Link
                 to="/flashbacks"
-                className="bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 border border-white/20"
+                className="bg-white/10 text-white font-semibold py-3 px-6 rounded-full text-center border border-white/20"
               >
                 ✨ Flashbacks
               </Link>
             </div>
-            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-lg rounded-full px-6 py-3 border border-white/20">
-              {user.avatar_url && (
-                <img
-                  src={user.avatar_url}
-                  alt={user.name}
-                  className="w-10 h-10 rounded-full"
-                />
-              )}
-              <span className="text-white font-medium">{user.name}</span>
-            </div>
+
+            {/* Sign out */}
             <button
               onClick={onLogout}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors text-sm mt-2"
             >
               Sign out
             </button>
@@ -98,24 +117,29 @@ export function Home({ user, loading, onLogout }: HomeProps) {
             {isSupported && permission !== 'granted' && (
               <button
                 onClick={requestPermission}
-                className="mt-4 flex items-center gap-2 text-purple-300 hover:text-purple-200 transition-colors text-sm"
+                className="flex items-center gap-2 text-purple-300 hover:text-purple-200 transition-colors text-sm"
               >
-                🔔 Enable memory notifications
+                🔔 Enable notifications
               </button>
             )}
             {isSupported && permission === 'granted' && (
-              <p className="mt-4 text-green-400 text-sm flex items-center gap-2">
-                ✓ Notifications enabled
-              </p>
+              <p className="text-green-400 text-sm">✓ Notifications enabled</p>
             )}
           </div>
         ) : (
-          <a
-            href={getGoogleLoginUrl()}
-            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
-          >
-            Sign in with Google
-          </a>
+          <div className="flex flex-col items-center gap-4">
+            <button
+              onClick={handleSignIn}
+              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-full text-lg shadow-lg"
+            >
+              Sign In
+            </button>
+            {!isNetworkAccess && (
+              <p className="text-gray-500 text-xs">
+                Uses Google OAuth
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -177,20 +177,8 @@ export function EventDetail({ token }: EventDetailProps) {
     setSelectedPhoto(photo);
   }
 
-  function handleNextPhoto() {
-    if (!selectedPhoto) return;
-    const currentIndex = photos.findIndex((p) => p.id === selectedPhoto.id);
-    if (currentIndex < photos.length - 1) {
-      setSelectedPhoto(photos[currentIndex + 1]);
-    }
-  }
-
-  function handlePreviousPhoto() {
-    if (!selectedPhoto) return;
-    const currentIndex = photos.findIndex((p) => p.id === selectedPhoto.id);
-    if (currentIndex > 0) {
-      setSelectedPhoto(photos[currentIndex - 1]);
-    }
+  function handleNavigatePhoto(photo: Photo) {
+    setSelectedPhoto(photo);
   }
 
   async function handleDeletePhoto(photoId: string) {
@@ -456,8 +444,7 @@ export function EventDetail({ token }: EventDetailProps) {
           photo={selectedPhoto}
           photos={photos}
           onClose={() => setSelectedPhoto(null)}
-          onNext={handleNextPhoto}
-          onPrevious={handlePreviousPhoto}
+          onNavigate={handleNavigatePhoto}
           onDelete={handleDeletePhoto}
         />
       )}
