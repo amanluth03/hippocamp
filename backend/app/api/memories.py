@@ -73,7 +73,7 @@ async def upload_memory(
         thumbnail_url=None,
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
-        metadata=memory.metadata,
+        extra_data=memory.extra_data,
     )
 
 
@@ -145,7 +145,7 @@ async def get_memory(
         thumbnail_url=None,
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
-        metadata=memory.metadata,
+        extra_data=memory.extra_data,
     )
 
 
@@ -187,7 +187,7 @@ async def update_memory(
         thumbnail_url=None,
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
-        metadata=memory.metadata,
+        extra_data=memory.extra_data,
     )
 
 

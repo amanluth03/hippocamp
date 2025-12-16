@@ -23,7 +23,7 @@ class Memory(Base):
     thumbnail_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     taken_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # EXIF data, etc.
+    extra_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # EXIF data, etc.
 
     # Relationships
     user = relationship("User", back_populates="memories")
