@@ -8,7 +8,7 @@ from alembic import context
 # Import our app's config and models
 from app.core.config import settings
 from app.core.database import Base
-from app.models import User, Event, EventMember, Photo  # noqa: F401
+from app.models import User, Event, EventMember, Photo, Memory  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

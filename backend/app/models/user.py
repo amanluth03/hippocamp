@@ -21,3 +21,4 @@ class User(Base):
     events_created = relationship("Event", back_populates="creator")
     event_memberships = relationship("EventMember", back_populates="user")
     photos = relationship("Photo", back_populates="uploader")
+    memories = relationship("Memory", back_populates="user")
