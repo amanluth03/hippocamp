@@ -101,7 +101,7 @@ export function Memories({ token }: MemoriesProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 px-4 py-6 pt-safe pb-safe">
       {/* Hidden file input for quick upload */}
       <input
         ref={fileInputRef}
@@ -114,41 +114,50 @@ export function Memories({ token }: MemoriesProps) {
 
       {/* Header */}
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        {/* Title Row */}
+        <div className="flex items-center justify-between mb-4">
           <Link
             to="/"
-            className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400"
+            className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400"
           >
             🦛 Hippo Campus
           </Link>
-          <div className="flex gap-3">
-            <Link
-              to="/events"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors"
-            >
-              Events
-            </Link>
-            <Link
-              to="/flashbacks"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors"
-            >
-              ✨ Flashbacks
-            </Link>
-          </div>
+          {/* Desktop save button */}
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="hidden sm:flex px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg transition-colors font-semibold items-center gap-2"
+          >
+            <span>+</span> Save Memory
+          </button>
+        </div>
+
+        {/* Navigation Row - scrollable on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible">
+          <Link
+            to="/events"
+            className="flex-shrink-0 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg border border-white/20 transition-colors"
+          >
+            📅 Events
+          </Link>
+          <Link
+            to="/flashbacks"
+            className="flex-shrink-0 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg border border-white/20 transition-colors"
+          >
+            ✨ Flashbacks
+          </Link>
+          {/* Mobile save button */}
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex-shrink-0 sm:hidden px-3 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm rounded-lg transition-colors"
+          >
+            + Save Memory
+          </button>
         </div>
 
         {/* Page Title */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">My Memories</h1>
-            <p className="text-gray-400">Your personal photo archive</p>
-          </div>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl transition-colors font-semibold flex items-center gap-2"
-          >
-            <span className="text-xl">+</span> Save Memory
-          </button>
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">My Memories</h1>
+          <p className="text-gray-400 text-sm sm:text-base">Your personal photo archive</p>
         </div>
 
         {/* Error message */}
@@ -253,7 +262,6 @@ export function Memories({ token }: MemoriesProps) {
           onDelete={async (photoId) => {
             await handleDeleteMemory(photoId);
           }}
-          canDelete={true}
         />
       )}
 

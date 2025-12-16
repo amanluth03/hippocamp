@@ -1,22 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Photo } from "../services/api";
 
 interface PhotoModalProps {
   photo: Photo;
   photos: Photo[];
   onClose: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
+  onNavigate?: (photo: Photo) => void;
   onDelete?: (photoId: string) => Promise<void>;
 }
 
-export function PhotoModal({ photo, photos, onClose, onNext, onPrevious, onDelete }: PhotoModalProps) {
+export function PhotoModal({ photo, photos, onClose, onNavigate, onDelete }: PhotoModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
   const currentIndex = photos.findIndex((p) => p.id === photo.id);
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex < photos.length - 1;
+
+  const handlePrevious = useCallback(() => {
+    if (hasPrevious && onNavigate) {
+      onNavigate(photos[currentIndex - 1]);
+    }
+  }, [hasPrevious, onNavigate, photos, currentIndex]);
+
+  const handleNext = useCallback(() => {
+    if (hasNext && onNavigate) {
+      onNavigate(photos[currentIndex + 1]);
+    }
+  }, [hasNext, onNavigate, photos, currentIndex]);
 
   // Reset delete confirmation when photo changes
   useEffect(() => {
@@ -39,18 +50,21 @@ export function PhotoModal({ photo, photos, onClose, onNext, onPrevious, onDelet
   }
 
   // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") onClose();
-    if (e.key === "ArrowLeft" && hasPrevious) onPrevious();
-    if (e.key === "ArrowRight" && hasNext) onNext();
-  };
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") handlePrevious();
+      if (e.key === "ArrowRight") handleNext();
+    }
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, handlePrevious, handleNext]);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
       onClick={onClose}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
     >
       {/* Close button */}
       <button
@@ -66,9 +80,9 @@ export function PhotoModal({ photo, photos, onClose, onNext, onPrevious, onDelet
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onPrevious();
+            handlePrevious();
           }}
-          className="absolute left-4 text-white/80 hover:text-white text-5xl font-light transition-colors z-50"
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white text-3xl rounded-full transition-colors z-50"
           aria-label="Previous photo"
         >
           ‹
@@ -80,9 +94,9 @@ export function PhotoModal({ photo, photos, onClose, onNext, onPrevious, onDelet
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onNext();
+            handleNext();
           }}
-          className="absolute right-4 text-white/80 hover:text-white text-5xl font-light transition-colors z-50"
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white text-3xl rounded-full transition-colors z-50"
           aria-label="Next photo"
         >
           ›

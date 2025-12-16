@@ -105,39 +105,50 @@ export function Events({ token }: EventsProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 px-4 py-6 pt-safe pb-safe">
       {/* Header */}
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Link to="/" className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
+        {/* Title Row */}
+        <div className="flex items-center justify-between mb-4">
+          <Link to="/" className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
             🦛 Hippo Campus
           </Link>
-          <div className="flex gap-3">
-            <Link
-              to="/memories"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors flex items-center gap-2"
-            >
-              📸 Memories
-            </Link>
-            <Link
-              to="/flashbacks"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors flex items-center gap-2"
-            >
-              ✨ Flashbacks
-            </Link>
-            <button
-              onClick={() => setShowJoinModal(true)}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors"
-            >
-              Join Event
-            </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg transition-colors"
-            >
-              + Create Event
-            </button>
-          </div>
+          {/* Desktop create button */}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="hidden sm:block px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg transition-colors"
+          >
+            + Create Event
+          </button>
+        </div>
+        
+        {/* Navigation Row - scrollable on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:flex-wrap">
+          <Link
+            to="/memories"
+            className="flex-shrink-0 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg border border-white/20 transition-colors"
+          >
+            📸 Memories
+          </Link>
+          <Link
+            to="/flashbacks"
+            className="flex-shrink-0 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg border border-white/20 transition-colors"
+          >
+            ✨ Flashbacks
+          </Link>
+          <button
+            onClick={() => setShowJoinModal(true)}
+            className="flex-shrink-0 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg border border-white/20 transition-colors"
+          >
+            Join Event
+          </button>
+          {/* Mobile create button */}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex-shrink-0 sm:hidden px-3 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm rounded-lg transition-colors"
+          >
+            + Create Event
+          </button>
         </div>
 
         {/* Error message */}
