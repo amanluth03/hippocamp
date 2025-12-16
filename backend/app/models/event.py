@@ -31,6 +31,7 @@ class Event(Base):
     creator = relationship("User", back_populates="events_created")
     members = relationship("EventMember", back_populates="event")
     photos = relationship("Photo", back_populates="event")
+    memories = relationship("Memory", back_populates="event")
 
 
 class EventMember(Base):
