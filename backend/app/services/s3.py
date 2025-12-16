@@ -29,6 +29,13 @@ class S3Service:
         extension = filename.split(".")[-1] if "." in filename else "jpg"
         return f"events/{event_id}/photos/{timestamp}_{unique_id}.{extension}"
     
+    def generate_memory_s3_key(self, user_id: uuid.UUID, filename: str) -> str:
+        """Generate a unique S3 key for a personal memory."""
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        extension = filename.split(".")[-1] if "." in filename else "jpg"
+        return f"memories/{user_id}/{timestamp}_{unique_id}.{extension}"
+    
     async def upload_photo(
         self,
         file: UploadFile,
@@ -71,6 +78,50 @@ class S3Service:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to upload photo: {str(e)}",
+            )
+    
+    async def upload_memory(
+        self,
+        file: UploadFile,
+        user_id: uuid.UUID,
+    ) -> str:
+        """
+        Upload a personal memory to S3 and return the S3 key.
+        
+        Args:
+            file: The uploaded file
+            user_id: The user saving this memory
+            
+        Returns:
+            str: The S3 key of the uploaded memory
+        """
+        # Validate file type
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File must be an image",
+            )
+        
+        # Generate S3 key for memory
+        s3_key = self.generate_memory_s3_key(user_id, file.filename or "memory.jpg")
+        
+        try:
+            # Read file content
+            content = await file.read()
+            
+            # Upload to S3
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Body=content,
+                ContentType=file.content_type,
+            )
+            
+            return s3_key
+        except ClientError as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload memory: {str(e)}",
             )
     
     def get_photo_url(self, s3_key: str) -> str:
