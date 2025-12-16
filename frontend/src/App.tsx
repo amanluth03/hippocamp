@@ -5,6 +5,7 @@ import { AuthCallback } from "./pages/AuthCallback";
 import { Events } from "./pages/Events";
 import { EventDetail } from "./pages/EventDetail";
 import { Flashbacks } from "./pages/Flashbacks";
+import { Memories } from "./pages/Memories";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function App() {
@@ -33,6 +34,10 @@ function App() {
           <Route
             path="/flashbacks"
             element={<Flashbacks token={token} />}
+          />
+          <Route
+            path="/memories"
+            element={<Memories token={token} />}
           />
         </Routes>
       </BrowserRouter>
