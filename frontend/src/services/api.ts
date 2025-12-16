@@ -291,3 +291,109 @@ export async function getFlashbacks(token: string): Promise<FlashbacksResponse> 
   return response.json();
 }
 
+// Memories API
+
+export interface Memory {
+  id: string;
+  user_id: string;
+  event_id?: string;
+  url: string;
+  thumbnail_url?: string;
+  taken_at?: string;
+  uploaded_at: string;
+  event_name?: string;
+  extra_data?: Record<string, unknown>;
+}
+
+export async function getMemories(
+  token: string,
+  options?: { limit?: number; offset?: number; eventId?: string }
+): Promise<Memory[]> {
+  const params = new URLSearchParams();
+  if (options?.limit) params.append("limit", options.limit.toString());
+  if (options?.offset) params.append("offset", options.offset.toString());
+  if (options?.eventId) params.append("event_id", options.eventId);
+
+  const response = await fetch(`${API_URL}/memories?${params}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get memories");
+  }
+
+  return response.json();
+}
+
+export async function uploadMemory(
+  token: string,
+  file: File,
+  eventId?: string
+): Promise<Memory> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (eventId) {
+    formData.append("event_id", eventId);
+  }
+
+  const response = await fetch(`${API_URL}/memories/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to upload memory");
+  }
+
+  return response.json();
+}
+
+export async function deleteMemory(
+  token: string,
+  memoryId: string
+): Promise<void> {
+  const response = await fetch(`${API_URL}/memories/${memoryId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete memory");
+  }
+}
+
+export async function updateMemory(
+  token: string,
+  memoryId: string,
+  eventId?: string | null
+): Promise<Memory> {
+  const params = new URLSearchParams();
+  if (eventId !== undefined) {
+    if (eventId === null) {
+      // Unlink from event - don't add param
+    } else {
+      params.append("event_id", eventId);
+    }
+  }
+
+  const response = await fetch(`${API_URL}/memories/${memoryId}?${params}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update memory");
+  }
+
+  return response.json();
+}
+

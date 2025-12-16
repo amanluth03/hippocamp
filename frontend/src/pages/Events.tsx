@@ -114,6 +114,12 @@ export function Events({ token }: EventsProps) {
           </Link>
           <div className="flex gap-3">
             <Link
+              to="/memories"
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors flex items-center gap-2"
+            >
+              📸 Memories
+            </Link>
+            <Link
               to="/flashbacks"
               className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors flex items-center gap-2"
             >

@@ -57,12 +57,18 @@ export function Home({ user, loading, onLogout }: HomeProps) {
           <div className="text-gray-400">Loading...</div>
         ) : user ? (
           <div className="flex flex-col items-center gap-4">
-            <div className="flex gap-4">
+            <div className="flex flex-wrap justify-center gap-4">
               <Link
                 to="/events"
                 className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
               >
                 View My Events
+              </Link>
+              <Link
+                to="/memories"
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-indigo-500/25"
+              >
+                📸 My Memories
               </Link>
               <Link
                 to="/flashbacks"
