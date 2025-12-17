@@ -35,7 +35,29 @@
       "short_name": "Flashbacks",
       "url": "/flashbacks",
       "icons": []
+    },
+    {
+      "name": "My Memories",
+      "short_name": "Memories",
+      "url": "/memories",
+      "icons": []
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "photos",
+          "accept": ["image/*", "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"]
+        }
+      ]
+    }
+  }
 }
 
