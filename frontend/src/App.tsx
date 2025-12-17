@@ -7,6 +7,7 @@ import { EventDetail } from "./pages/EventDetail";
 import { Flashbacks } from "./pages/Flashbacks";
 import { Memories } from "./pages/Memories";
 import { DevLogin } from "./pages/DevLogin";
+import { ShareTarget } from "./pages/ShareTarget";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function App() {
@@ -43,6 +44,10 @@ function App() {
           <Route
             path="/dev/login"
             element={<DevLogin onLogin={login} />}
+          />
+          <Route
+            path="/share-target"
+            element={<ShareTarget token={token} />}
           />
         </Routes>
       </BrowserRouter>

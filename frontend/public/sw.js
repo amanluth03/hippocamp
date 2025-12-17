@@ -1,5 +1,6 @@
 // Hippo Campus Service Worker
 const CACHE_NAME = 'hippo-campus-v1';
+const SHARE_TARGET_CACHE = 'share-target-cache';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -42,6 +43,14 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network first, fall back to cache
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Handle Share Target POST requests
+  if (event.request.method === 'POST' && url.pathname === '/share-target') {
+    event.respondWith(handleShareTarget(event.request));
+    return;
+  }
+
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
@@ -77,6 +86,43 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Handle Share Target - cache files and redirect to handler page
+async function handleShareTarget(request) {
+  console.log('[SW] Handling share target request');
+  
+  try {
+    const formData = await request.formData();
+    const files = formData.getAll('photos');
+    
+    if (files && files.length > 0) {
+      // Cache the shared files temporarily
+      const cache = await caches.open(SHARE_TARGET_CACHE);
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file instanceof File) {
+          // Create a unique URL for this file
+          const fileUrl = `/shared-file-${Date.now()}-${i}-${file.name}`;
+          const response = new Response(file, {
+            headers: {
+              'Content-Type': file.type,
+              'X-File-Name': file.name,
+            },
+          });
+          await cache.put(fileUrl, response);
+          console.log('[SW] Cached shared file:', fileUrl);
+        }
+      }
+    }
+    
+    // Redirect to the share target handler page
+    return Response.redirect('/share-target', 303);
+  } catch (error) {
+    console.error('[SW] Share target error:', error);
+    return Response.redirect('/share-target?error=true', 303);
+  }
+}
 
 // Push notification event
 self.addEventListener('push', (event) => {
