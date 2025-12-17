@@ -9,6 +9,7 @@ import { Memories } from "./pages/Memories";
 import { DevLogin } from "./pages/DevLogin";
 import { ShareTarget } from "./pages/ShareTarget";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { BottomNav } from "./components/BottomNav";
 
 function App() {
   const { user, loading, token, login, logout } = useAuth();
@@ -16,40 +17,45 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <Routes>
+        {/* Main content area with bottom padding for nav */}
+        <div className={user ? "has-bottom-nav" : ""}>
+          <Routes>
           <Route
             path="/"
-            element={<Home user={user} loading={loading} onLogout={logout} />}
+            element={<Home user={user} loading={loading} onLogout={logout} token={token} />}
           />
-          <Route
-            path="/auth/callback"
-            element={<AuthCallback onLogin={login} />}
-          />
-          <Route
-            path="/events"
-            element={<Events token={token} />}
-          />
-          <Route
-            path="/events/:eventId"
-            element={<EventDetail token={token} />}
-          />
-          <Route
-            path="/flashbacks"
-            element={<Flashbacks token={token} />}
-          />
-          <Route
-            path="/memories"
-            element={<Memories token={token} />}
-          />
-          <Route
-            path="/dev/login"
-            element={<DevLogin onLogin={login} />}
-          />
-          <Route
-            path="/share-target"
-            element={<ShareTarget token={token} />}
-          />
-        </Routes>
+            <Route
+              path="/auth/callback"
+              element={<AuthCallback onLogin={login} />}
+            />
+            <Route
+              path="/events"
+              element={<Events token={token} />}
+            />
+            <Route
+              path="/events/:eventId"
+              element={<EventDetail token={token} />}
+            />
+            <Route
+              path="/flashbacks"
+              element={<Flashbacks token={token} />}
+            />
+            <Route
+              path="/memories"
+              element={<Memories token={token} />}
+            />
+            <Route
+              path="/dev/login"
+              element={<DevLogin onLogin={login} />}
+            />
+            <Route
+              path="/share-target"
+              element={<ShareTarget token={token} />}
+            />
+          </Routes>
+        </div>
+        {/* Bottom navigation - only shows when user is logged in */}
+        {user && <BottomNav />}
       </BrowserRouter>
     </ErrorBoundary>
   );

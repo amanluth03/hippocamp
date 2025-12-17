@@ -226,10 +226,10 @@ export function Memories({ token }: MemoriesProps) {
           </div>
         )}
 
-        {/* Floating Action Button (mobile) */}
+        {/* Floating Action Button (mobile) - positioned above bottom nav */}
         <button
           onClick={handleQuickUpload}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl md:hidden"
+          className="fixed fab-bottom right-4 w-14 h-14 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl md:hidden z-30"
         >
           +
         </button>

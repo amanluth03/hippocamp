@@ -41,3 +41,18 @@ body {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 }
+
+/* Bottom nav safe area */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Content padding for bottom nav */
+.has-bottom-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* FAB positioning above bottom nav */
+.fab-bottom {
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}

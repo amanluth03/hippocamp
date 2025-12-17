@@ -1,0 +1,144 @@
+import uuid
+from typing import List, Optional
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+
+from app.core.database import get_db
+from app.core.security import get_current_user
+from app.models import User, Event, EventMember, Photo, Memory
+from app.services.s3 import s3_service
+
+router = APIRouter(prefix="/feed", tags=["Feed"])
+
+
+class FeedItem(BaseModel):
+    """A single item in the feed (either a photo from an event or a memory)."""
+    id: str
+    type: str  # "event_photo" or "memory"
+    url: str
+    thumbnail_url: Optional[str] = None
+    uploaded_at: datetime
+    
+    # For event photos
+    event_id: Optional[str] = None
+    event_name: Optional[str] = None
+    uploader_name: Optional[str] = None
+    
+    # For memories
+    is_personal: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class FeedResponse(BaseModel):
+    """Paginated feed response."""
+    items: List[FeedItem]
+    has_more: bool
+    next_offset: int
+
+
+@router.get("", response_model=FeedResponse)
+async def get_feed(
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get a unified feed of photos from all events the user is a member of,
+    plus their personal memories. Sorted by upload date (newest first).
+    """
+    # Get all event IDs the user is a member of
+    member_event_ids = db.query(EventMember.event_id).filter(
+        EventMember.user_id == current_user.id
+    ).all()
+    event_ids = [e[0] for e in member_event_ids]
+    
+    # Build a list of feed items from event photos
+    event_photos = []
+    if event_ids:
+        photos = db.query(Photo).filter(
+            Photo.event_id.in_(event_ids)
+        ).all()
+        
+        # Pre-fetch events and uploaders for efficiency
+        events_map = {}
+        for event_id in event_ids:
+            event = db.query(Event).filter(Event.id == event_id).first()
+            if event:
+                events_map[event_id] = event.name
+        
+        users_map = {}
+        uploader_ids = list(set(p.uploaded_by for p in photos))
+        for uid in uploader_ids:
+            user = db.query(User).filter(User.id == uid).first()
+            if user:
+                users_map[uid] = user.name or user.email
+        
+        for photo in photos:
+            event_photos.append(FeedItem(
+                id=f"photo_{photo.id}",
+                type="event_photo",
+                url=s3_service.get_photo_url(photo.s3_key),
+                thumbnail_url=s3_service.get_photo_url(photo.thumbnail_key) if photo.thumbnail_key else None,
+                uploaded_at=photo.uploaded_at,
+                event_id=str(photo.event_id),
+                event_name=events_map.get(photo.event_id, "Unknown Event"),
+                uploader_name=users_map.get(photo.uploaded_by, "Unknown"),
+                is_personal=False,
+            ))
+    
+    # Build a list of feed items from personal memories
+    memories = db.query(Memory).filter(
+        Memory.user_id == current_user.id
+    ).all()
+    
+    memory_items = []
+    for memory in memories:
+        # Get event name if linked
+        event_name = None
+        if memory.event_id:
+            event = db.query(Event).filter(Event.id == memory.event_id).first()
+            if event:
+                event_name = event.name
+        
+        memory_items.append(FeedItem(
+            id=f"memory_{memory.id}",
+            type="memory",
+            url=s3_service.get_photo_url(memory.s3_key),
+            thumbnail_url=s3_service.get_photo_url(memory.thumbnail_key) if memory.thumbnail_key else None,
+            uploaded_at=memory.uploaded_at,
+            event_id=str(memory.event_id) if memory.event_id else None,
+            event_name=event_name,
+            uploader_name="You",
+            is_personal=True,
+        ))
+    
+    # Combine and sort by uploaded_at (newest first)
+    all_items = event_photos + memory_items
+    all_items.sort(key=lambda x: x.uploaded_at, reverse=True)
+    
+    # Deduplicate: if a memory is linked to an event, don't show the event photo duplicate
+    # (since uploading a memory to an event creates both a Memory and Photo record)
+    seen_urls = set()
+    unique_items = []
+    for item in all_items:
+        if item.url not in seen_urls:
+            seen_urls.add(item.url)
+            unique_items.append(item)
+    
+    # Apply pagination
+    total = len(unique_items)
+    paginated_items = unique_items[offset:offset + limit]
+    has_more = offset + limit < total
+    
+    return FeedResponse(
+        items=paginated_items,
+        has_more=has_more,
+        next_offset=offset + limit if has_more else offset,
+    )
+

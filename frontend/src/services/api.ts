@@ -401,3 +401,43 @@ export async function updateMemory(
   return response.json();
 }
 
+// Feed API
+export interface FeedItem {
+  id: string;
+  type: "event_photo" | "memory";
+  url: string;
+  thumbnail_url?: string;
+  uploaded_at: string;
+  event_id?: string;
+  event_name?: string;
+  uploader_name?: string;
+  is_personal: boolean;
+}
+
+export interface FeedResponse {
+  items: FeedItem[];
+  has_more: boolean;
+  next_offset: number;
+}
+
+export async function getFeed(
+  token: string,
+  limit: number = 20,
+  offset: number = 0
+): Promise<FeedResponse> {
+  const response = await fetch(
+    `${API_URL}/feed?limit=${limit}&offset=${offset}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch feed");
+  }
+
+  return response.json();
+}
+
