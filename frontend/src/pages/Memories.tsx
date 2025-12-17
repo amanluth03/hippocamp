@@ -240,17 +240,23 @@ export function Memories({ token }: MemoriesProps) {
         <PhotoModal
           photo={{
             id: selectedMemory.id,
+            event_id: selectedMemory.event_id || "",
+            uploaded_by: "",
             url: selectedMemory.url,
             thumbnail_url: selectedMemory.thumbnail_url,
             uploaded_at: selectedMemory.uploaded_at,
+            is_memory: true,
             uploader_name: "You",
             uploader_email: "",
           }}
           photos={memories.map((m) => ({
             id: m.id,
+            event_id: m.event_id || "",
+            uploaded_by: "",
             url: m.url,
             thumbnail_url: m.thumbnail_url,
             uploaded_at: m.uploaded_at,
+            is_memory: true,
             uploader_name: "You",
             uploader_email: "",
           }))}
