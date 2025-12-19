@@ -40,12 +40,16 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(auth_router)
-app.include_router(events_router)
-app.include_router(photos_router)
-app.include_router(flashbacks_router)
-app.include_router(memories_router)
-app.include_router(feed_router)
+# In production, CloudFront routes /api/* to Lambda, so we need the /api prefix
+# In development, we access the API directly without the prefix
+api_prefix = "/api" if not settings.DEBUG else ""
+
+app.include_router(auth_router, prefix=api_prefix)
+app.include_router(events_router, prefix=api_prefix)
+app.include_router(photos_router, prefix=api_prefix)
+app.include_router(flashbacks_router, prefix=api_prefix)
+app.include_router(memories_router, prefix=api_prefix)
+app.include_router(feed_router, prefix=api_prefix)
 
 
 @app.get("/")
@@ -53,6 +57,7 @@ async def root():
     return {"message": "Welcome to Hippo Campus!"}
 
 
+@app.get("/api/health")
 @app.get("/health")
 async def health_check(db: Session = Depends(get_db)):
     """Health check that also verifies database connection."""
