@@ -18,3 +18,6 @@ boto3==1.34.34
 # Environment variables
 python-dotenv==1.0.0
 
+# Lambda adapter (for AWS deployment)
+mangum==0.17.0
+
