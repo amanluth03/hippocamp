@@ -11,12 +11,19 @@ export function AuthCallback({ onLogin }: AuthCallbackProps) {
 
   useEffect(() => {
     const token = searchParams.get("token");
+    console.log("AuthCallback: token received:", token ? "yes" : "no");
 
     if (token) {
+      console.log("AuthCallback: calling onLogin");
       onLogin(token);
-      navigate("/", { replace: true });
+      console.log("AuthCallback: token saved, checking localStorage:", localStorage.getItem("hippocamp_token") ? "saved" : "NOT saved");
+      // Small delay to ensure state updates before navigation
+      setTimeout(() => {
+        console.log("AuthCallback: navigating to home");
+        navigate("/", { replace: true });
+      }, 100);
     } else {
-      // No token, redirect to home
+      console.log("AuthCallback: no token, redirecting to home");
       navigate("/", { replace: true });
     }
   }, [searchParams, onLogin, navigate]);

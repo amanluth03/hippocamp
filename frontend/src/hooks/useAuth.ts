@@ -33,8 +33,15 @@ export function useAuth() {
   }, [token]);
 
   const login = (newToken: string) => {
-    localStorage.setItem(TOKEN_KEY, newToken);
+    console.log("useAuth.login: saving token to localStorage");
+    try {
+      localStorage.setItem(TOKEN_KEY, newToken);
+      console.log("useAuth.login: localStorage.setItem succeeded");
+    } catch (e) {
+      console.error("useAuth.login: localStorage.setItem FAILED", e);
+    }
     setToken(newToken);
+    console.log("useAuth.login: state updated");
   };
 
   const logout = () => {
