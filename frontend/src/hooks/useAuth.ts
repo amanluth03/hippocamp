@@ -12,16 +12,21 @@ export function useAuth() {
 
   useEffect(() => {
     async function loadUser() {
+      console.log("useAuth.loadUser: starting, token exists:", !!token);
       if (!token) {
+        console.log("useAuth.loadUser: no token, setting loading false");
         setLoading(false);
         return;
       }
 
       try {
+        console.log("useAuth.loadUser: calling getCurrentUser");
         const userData = await getCurrentUser(token);
+        console.log("useAuth.loadUser: got user data:", userData?.email);
         setUser(userData);
       } catch (error) {
         // Token is invalid, clear it
+        console.error("useAuth.loadUser: ERROR - clearing token:", error);
         localStorage.removeItem(TOKEN_KEY);
         setToken(null);
       } finally {
