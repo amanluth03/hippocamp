@@ -170,18 +170,11 @@ resource "aws_cloudfront_distribution" "main" {
 
   # ==========================================================================
   # CUSTOM ERROR RESPONSES (SPA)
+  # Note: These only apply to the default behavior (frontend S3)
+  # API errors are passed through as-is
   # ==========================================================================
-  custom_error_response {
-    error_code         = 403
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
-
-  custom_error_response {
-    error_code         = 404
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
+  # Removed - these were causing API errors to return index.html
+  # The SPA routing CloudFront function handles 404s for frontend routes
 
   # ==========================================================================
   # RESTRICTIONS
