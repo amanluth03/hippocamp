@@ -154,9 +154,11 @@ class S3Service:
             )
     
     def get_photo_url(self, s3_key: str) -> str:
-        """Get the public URL for a photo."""
-        region = settings.AWS_REGION or settings.AWS_S3_REGION or "us-east-1"
-        return f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+        """Get the public URL for a photo via CloudFront."""
+        # Photos are served through CloudFront at /photos/ path
+        # CloudFront has access to the private S3 bucket via Origin Access Control
+        frontend_url = settings.FRONTEND_URL or "https://thehippocampus.net"
+        return f"{frontend_url}/photos/{s3_key}"
 
     def delete_photo(self, s3_key: str) -> bool:
         """
