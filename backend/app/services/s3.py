@@ -16,14 +16,22 @@ class S3Service:
         if not bucket_name:
             raise ValueError("S3_BUCKET_NAME or AWS_S3_BUCKET not configured")
         
-        # In Lambda, credentials come from IAM role, no explicit keys needed
-        # boto3 will automatically use the Lambda execution role
-        self.s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
-            region_name=settings.AWS_REGION or settings.AWS_S3_REGION,
-        )
+        # Get region
+        region = settings.AWS_REGION or settings.AWS_S3_REGION or "us-east-1"
+        
+        # In Lambda, credentials come from IAM role automatically
+        # Only pass explicit credentials if they're actually provided (local dev)
+        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+            self.s3_client = boto3.client(
+                "s3",
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=region,
+            )
+        else:
+            # Lambda: use IAM role credentials automatically
+            self.s3_client = boto3.client("s3", region_name=region)
+        
         self.bucket_name = bucket_name
     
     def generate_s3_key(self, event_id: uuid.UUID, filename: str) -> str:
@@ -130,7 +138,8 @@ class S3Service:
     
     def get_photo_url(self, s3_key: str) -> str:
         """Get the public URL for a photo."""
-        return f"https://{self.bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
+        region = settings.AWS_REGION or settings.AWS_S3_REGION or "us-east-1"
+        return f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
 
     def delete_photo(self, s3_key: str) -> bool:
         """
