@@ -22,13 +22,23 @@ resource "aws_security_group" "rds" {
   description = "Security group for RDS PostgreSQL"
   vpc_id      = data.aws_vpc.default.id
 
-  # Allow PostgreSQL from Lambda (will be in same VPC)
+  # Allow PostgreSQL from Lambda (VPC)
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [] # Will add Lambda SG reference later
-    cidr_blocks     = [data.aws_vpc.default.cidr_block]
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.default.cidr_block]
+    description = "Lambda/VPC access"
+  }
+
+  # Allow PostgreSQL from anywhere (for GitHub Actions migrations)
+  # Still protected by password authentication
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "External access for migrations"
   }
 
   egress {
@@ -76,7 +86,7 @@ resource "aws_db_instance" "main" {
   # Network configuration
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
-  publicly_accessible    = false
+  publicly_accessible    = true  # Allows external access (still password protected)
 
   # Storage configuration
   storage_type          = "gp3"
