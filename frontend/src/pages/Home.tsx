@@ -11,13 +11,19 @@ interface HomeProps {
   token?: string | null;
 }
 
-// Check if we're on a mobile/network device (not localhost)
-const isNetworkAccess = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+// Check if we're in development mode AND on a mobile/network device (not localhost)
+// This enables dev login only in development for mobile testing
+const isProduction = import.meta.env.PROD;
+const isNetworkAccess = !isProduction && 
+  window.location.hostname !== "localhost" && 
+  window.location.hostname !== "127.0.0.1";
 
 export function Home({ user, loading, onLogout, token }: HomeProps) {
   const navigate = useNavigate();
 
   const handleSignIn = () => {
+    // In production, always use Google OAuth
+    // In development on network (mobile testing), use dev login
     if (isNetworkAccess) {
       navigate("/dev/login");
     } else {

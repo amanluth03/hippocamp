@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface DevLoginProps {
   onLogin: (token: string) => void;
 }
+
+// Check if we're in production
+const isProduction = import.meta.env.PROD;
 
 // Get API URL (same logic as api.ts)
 const API_URL = window.location.hostname === "localhost" 
@@ -15,6 +18,18 @@ export function DevLogin({ onLogin }: DevLoginProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Redirect to home if accessed in production
+  useEffect(() => {
+    if (isProduction) {
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
+
+  // Don't render anything in production
+  if (isProduction) {
+    return null;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

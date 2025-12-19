@@ -11,16 +11,20 @@ class S3Service:
     """Service for handling S3 photo uploads."""
     
     def __init__(self):
-        if not settings.S3_BUCKET_NAME:
-            raise ValueError("S3_BUCKET_NAME not configured")
+        # Support both S3_BUCKET_NAME and AWS_S3_BUCKET (Terraform compatibility)
+        bucket_name = settings.S3_BUCKET_NAME or settings.AWS_S3_BUCKET
+        if not bucket_name:
+            raise ValueError("S3_BUCKET_NAME or AWS_S3_BUCKET not configured")
         
+        # In Lambda, credentials come from IAM role, no explicit keys needed
+        # boto3 will automatically use the Lambda execution role
         self.s3_client = boto3.client(
             "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_REGION,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
+            region_name=settings.AWS_REGION or settings.AWS_S3_REGION,
         )
-        self.bucket_name = settings.S3_BUCKET_NAME
+        self.bucket_name = bucket_name
     
     def generate_s3_key(self, event_id: uuid.UUID, filename: str) -> str:
         """Generate a unique S3 key for a photo."""
