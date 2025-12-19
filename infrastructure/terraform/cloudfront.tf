@@ -243,16 +243,13 @@ resource "aws_cloudfront_cache_policy" "api_no_cache" {
 
   parameters_in_cache_key_and_forwarded_to_origin {
     cookies_config {
-      cookie_behavior = "all"
+      cookie_behavior = "none"
     }
     headers_config {
-      header_behavior = "whitelist"
-      headers {
-        items = ["Authorization", "Content-Type"]
-      }
+      header_behavior = "none"
     }
     query_strings_config {
-      query_string_behavior = "all"
+      query_string_behavior = "none"
     }
   }
 }
@@ -263,7 +260,7 @@ resource "aws_cloudfront_cache_policy" "api_no_cache" {
 
 resource "aws_cloudfront_origin_request_policy" "api_forward_all" {
   name    = "${var.app_name}-api-forward-all"
-  comment = "Forward all headers/cookies to API"
+  comment = "Forward headers/cookies to API"
 
   cookies_config {
     cookie_behavior = "all"
@@ -272,7 +269,9 @@ resource "aws_cloudfront_origin_request_policy" "api_forward_all" {
   headers_config {
     header_behavior = "whitelist"
     headers {
-      items = ["Authorization", "Content-Type", "Origin", "Accept"]
+      # Note: Authorization is forwarded automatically by CloudFront when using cache policy
+      # Cannot explicitly list it here
+      items = ["Content-Type", "Origin", "Accept"]
     }
   }
 

@@ -54,6 +54,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "photos" {
     id     = "archive-old-photos"
     status = "Enabled"
 
+    # Apply to all objects in bucket
+    filter {}
+
     # Move to Infrequent Access after 90 days
     transition {
       days          = 90
@@ -107,8 +110,13 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
 # TERRAFORM STATE BUCKET (for remote state storage)
 # =============================================================================
 
+# Generate random suffix for globally unique bucket name
+resource "random_id" "state_bucket_suffix" {
+  byte_length = 4
+}
+
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "${var.app_name}-terraform-state"
+  bucket = "${var.app_name}-terraform-state-${random_id.state_bucket_suffix.hex}"
 
   tags = {
     Name = "Hippo Campus Terraform State"

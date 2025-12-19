@@ -62,10 +62,11 @@ resource "aws_db_instance" "main" {
 
   # Engine configuration
   engine               = "postgres"
-  engine_version       = "15.4"
+  engine_version       = "15"  # Use major version, AWS picks latest minor
   instance_class       = var.db_instance_class
   allocated_storage    = 20
   max_allocated_storage = 100 # Enable autoscaling up to 100GB
+  auto_minor_version_upgrade = true
 
   # Database configuration
   db_name  = var.db_name
@@ -108,15 +109,11 @@ resource "aws_db_parameter_group" "main" {
   family = "postgres15"
   name   = "${var.app_name}-pg-params"
 
-  # Optimize for small instance
+  # max_connections is a dynamic parameter (can be changed without restart)
   parameter {
-    name  = "shared_buffers"
-    value = "{DBInstanceClassMemory/4096}" # 25% of memory
-  }
-
-  parameter {
-    name  = "max_connections"
-    value = "100"
+    name         = "max_connections"
+    value        = "100"
+    apply_method = "pending-reboot"
   }
 
   tags = {
