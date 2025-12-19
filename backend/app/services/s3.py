@@ -24,19 +24,12 @@ class S3Service:
         
         logger.info(f"Initializing S3Service: bucket={bucket_name}, region={region}")
         
-        # In Lambda, credentials come from IAM role automatically
-        # Only pass explicit credentials if they're actually provided (local dev)
-        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
-            logger.info("Using explicit AWS credentials (local dev mode)")
-            self.s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=region,
-            )
-        else:
-            logger.info("Using IAM role credentials (Lambda mode)")
-            self.s3_client = boto3.client("s3", region_name=region)
+        # Let boto3 handle credentials automatically:
+        # - In Lambda: uses IAM role credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN)
+        # - Locally: uses ~/.aws/credentials or environment variables
+        # Never pass explicit credentials - boto3's default chain handles all cases
+        self.s3_client = boto3.client("s3", region_name=region)
+        logger.info("S3 client initialized with default credential chain")
         
         self.bucket_name = bucket_name
     
