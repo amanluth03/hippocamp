@@ -101,16 +101,13 @@ resource "aws_lambda_function" "api" {
   filename         = data.archive_file.lambda_placeholder.output_path
   source_code_hash = data.archive_file.lambda_placeholder.output_base64sha256
 
-  # VPC configuration to access RDS
-  vpc_config {
-    subnet_ids         = data.aws_subnets.default.ids
-    security_group_ids = [aws_security_group.lambda.id]
-  }
+  # Note: Not in VPC - RDS is publicly accessible with password auth
+  # This allows Lambda to access both RDS and internet (Google OAuth, etc.)
 
   environment {
     variables = {
       DEBUG                = "false"
-      DATABASE_URL         = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}"
+      DATABASE_URL         = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}?sslmode=require"
       SECRET_KEY           = var.jwt_secret_key
       GOOGLE_CLIENT_ID     = var.google_client_id
       GOOGLE_CLIENT_SECRET = var.google_client_secret
@@ -127,7 +124,6 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,
-    aws_iam_role_policy_attachment.lambda_vpc,
   ]
 }
 
