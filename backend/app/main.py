@@ -19,22 +19,21 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
-# In debug mode, allow multiple origins for network testing
-cors_origins = [settings.FRONTEND_URL]
+# Production: Only allow the specific frontend domain
+# Development: Allow all origins for mobile/network testing
 if settings.DEBUG:
-    # Allow common dev ports on any network IP
-    cors_origins.extend([
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-    ])
-    # Allow all origins in debug mode for mobile testing
+    # Development mode - allow all origins for easier testing
     cors_origins = ["*"]
+    cors_origin_regex = r"http://\d+\.\d+\.\d+\.\d+:\d+"  # Allow any IP:port
+else:
+    # Production mode - only allow specific domain
+    cors_origins = [settings.FRONTEND_URL]
+    cors_origin_regex = None
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if cors_origins != ["*"] else cors_origins,
-    allow_origin_regex=r"http://\d+\.\d+\.\d+\.\d+:\d+" if settings.DEBUG else None,
+    allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

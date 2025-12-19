@@ -1,8 +1,12 @@
-// Use the same host as the frontend, but port 8000 for the API
-// This allows testing on mobile devices over the network
-const API_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:8000"
-  : `http://${window.location.hostname}:8000`;
+// API URL configuration
+// - Production: Uses /api path (same domain via CloudFront routing)
+// - Development: Uses localhost:8000 or network IP:8000
+const isProduction = import.meta.env.PROD;
+const API_URL = isProduction
+  ? "/api"
+  : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000"
+    : `http://${window.location.hostname}:8000`;
 
 export interface User {
   id: string;
