@@ -168,6 +168,12 @@ resource "aws_cloudfront_distribution" "main" {
     compress               = true
 
     cache_policy_id = aws_cloudfront_cache_policy.static_assets.id
+
+    # Strip /photos prefix before sending to S3
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.strip_photos_prefix.arn
+    }
   }
 
   # ==========================================================================
@@ -256,6 +262,25 @@ resource "aws_cloudfront_function" "spa_routing" {
       
       // Rewrite all other paths to index.html for SPA routing
       request.uri = '/index.html';
+      return request;
+    }
+  EOF
+}
+
+resource "aws_cloudfront_function" "strip_photos_prefix" {
+  name    = "${var.app_name}-strip-photos-prefix"
+  runtime = "cloudfront-js-1.0"
+  comment = "Strip /photos prefix before sending to S3"
+  publish = true
+
+  code = <<-EOF
+    function handler(event) {
+      var request = event.request;
+      // Remove /photos prefix from the URI
+      // /photos/memories/user/file.png -> /memories/user/file.png
+      if (request.uri.startsWith('/photos/')) {
+        request.uri = request.uri.substring(7); // Remove '/photos'
+      }
       return request;
     }
   EOF
