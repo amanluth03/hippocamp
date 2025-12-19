@@ -149,9 +149,11 @@ resource "aws_cloudfront_distribution" "main" {
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
-    # Don't cache API responses
-    cache_policy_id          = aws_cloudfront_cache_policy.api_no_cache.id
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.api_forward_all.id
+    # Use AWS managed policies that properly forward Authorization header
+    # CachingDisabled: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+    # AllViewerExceptHostHeader: b689b0a8-53d0-40ab-baf2-68738e2966ac
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }
 
   # ==========================================================================
@@ -227,51 +229,10 @@ resource "aws_cloudfront_cache_policy" "static_assets" {
   }
 }
 
-resource "aws_cloudfront_cache_policy" "api_no_cache" {
-  name        = "${var.app_name}-api-no-cache"
-  comment     = "Don't cache API responses"
-  default_ttl = 0
-  max_ttl     = 0
-  min_ttl     = 0
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config {
-      cookie_behavior = "none"
-    }
-    headers_config {
-      header_behavior = "none"
-    }
-    query_strings_config {
-      query_string_behavior = "none"
-    }
-  }
-}
-
-# =============================================================================
-# ORIGIN REQUEST POLICIES
-# =============================================================================
-
-resource "aws_cloudfront_origin_request_policy" "api_forward_all" {
-  name    = "${var.app_name}-api-forward-all"
-  comment = "Forward headers/cookies to API"
-
-  cookies_config {
-    cookie_behavior = "all"
-  }
-
-  headers_config {
-    header_behavior = "whitelist"
-    headers {
-      # Note: Authorization is forwarded automatically by CloudFront when using cache policy
-      # Cannot explicitly list it here
-      items = ["Content-Type", "Origin", "Accept"]
-    }
-  }
-
-  query_strings_config {
-    query_string_behavior = "all"
-  }
-}
+# Note: Using AWS managed policies for API behavior:
+# - CachingDisabled (4135ea2d-6df8-44a3-9df3-4b5a84be39ad)
+# - AllViewerExceptHostHeader (b689b0a8-53d0-40ab-baf2-68738e2966ac)
+# These properly forward Authorization header without caching
 
 # =============================================================================
 # CLOUDFRONT FUNCTION (SPA Routing)
