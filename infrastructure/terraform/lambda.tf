@@ -114,7 +114,7 @@ resource "aws_lambda_function" "api" {
       SECRET_KEY           = var.jwt_secret_key
       GOOGLE_CLIENT_ID     = var.google_client_id
       GOOGLE_CLIENT_SECRET = var.google_client_secret
-      GOOGLE_REDIRECT_URI  = "https://${var.domain_name}/auth/callback"
+      GOOGLE_REDIRECT_URI  = "https://${var.domain_name}/api/auth/google/callback"
       AWS_S3_BUCKET        = aws_s3_bucket.photos.id
       AWS_S3_REGION        = var.aws_region
       FRONTEND_URL         = "https://${var.domain_name}"
