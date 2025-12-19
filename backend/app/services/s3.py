@@ -1,10 +1,13 @@
 import uuid
+import logging
 from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
 from fastapi import UploadFile, HTTPException, status
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class S3Service:
@@ -19,9 +22,12 @@ class S3Service:
         # Get region
         region = settings.AWS_REGION or settings.AWS_S3_REGION or "us-east-1"
         
+        logger.info(f"Initializing S3Service: bucket={bucket_name}, region={region}")
+        
         # In Lambda, credentials come from IAM role automatically
         # Only pass explicit credentials if they're actually provided (local dev)
         if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+            logger.info("Using explicit AWS credentials (local dev mode)")
             self.s3_client = boto3.client(
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -29,7 +35,7 @@ class S3Service:
                 region_name=region,
             )
         else:
-            # Lambda: use IAM role credentials automatically
+            logger.info("Using IAM role credentials (Lambda mode)")
             self.s3_client = boto3.client("s3", region_name=region)
         
         self.bucket_name = bucket_name
@@ -76,6 +82,7 @@ class S3Service:
         try:
             # Read file content
             content = await file.read()
+            logger.info(f"Uploading photo to S3: bucket={self.bucket_name}, key={s3_key}, size={len(content)}")
             
             # Upload to S3
             self.s3_client.put_object(
@@ -85,8 +92,16 @@ class S3Service:
                 ContentType=file.content_type,
             )
             
+            logger.info(f"Successfully uploaded photo: {s3_key}")
             return s3_key
         except ClientError as e:
+            logger.error(f"S3 ClientError uploading photo: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload photo: {str(e)}",
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error uploading photo: {type(e).__name__}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to upload photo: {str(e)}",
@@ -120,6 +135,7 @@ class S3Service:
         try:
             # Read file content
             content = await file.read()
+            logger.info(f"Uploading memory to S3: bucket={self.bucket_name}, key={s3_key}, size={len(content)}")
             
             # Upload to S3
             self.s3_client.put_object(
@@ -129,8 +145,16 @@ class S3Service:
                 ContentType=file.content_type,
             )
             
+            logger.info(f"Successfully uploaded memory: {s3_key}")
             return s3_key
         except ClientError as e:
+            logger.error(f"S3 ClientError uploading memory: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload memory: {str(e)}",
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error uploading memory: {type(e).__name__}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to upload memory: {str(e)}",
