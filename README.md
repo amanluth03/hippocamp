@@ -2,7 +2,7 @@
 
 A photo sharing and memory saving application for capturing and reliving event moments.
 
-## Features (Planned)
+## Features
 
 - **Event Albums** - Create events and invite friends to share photos
 - **Flashbacks** - Get "on this day" memory notifications
