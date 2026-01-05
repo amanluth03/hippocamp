@@ -26,6 +26,7 @@ Before the workflow can run, configure these secrets in your repository:
 | `S3_FRONTEND_BUCKET` | Frontend S3 bucket name | `hippocamp-frontend-prod` |
 | `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID | `E1234567890ABC` |
 | `LAMBDA_FUNCTION_NAME` | Lambda function name | `hippocamp-api-prod` |
+| `THUMBNAIL_LAMBDA_NAME` | Thumbnail Lambda name | `hippocamp-thumbnail-prod` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
 
 ## How to Add Secrets

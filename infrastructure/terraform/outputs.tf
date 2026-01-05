@@ -62,6 +62,11 @@ output "lambda_function_name" {
   value       = aws_lambda_function.api.function_name
 }
 
+output "thumbnail_lambda_name" {
+  description = "Thumbnail Lambda function name"
+  value       = aws_lambda_function.thumbnail.function_name
+}
+
 # Helpful for GitHub Secrets
 output "github_secrets_summary" {
   description = "Values to add to GitHub Secrets"
@@ -75,6 +80,7 @@ output "github_secrets_summary" {
     S3_FRONTEND_BUCKET         = ${aws_s3_bucket.frontend.id}
     CLOUDFRONT_DISTRIBUTION_ID = ${aws_cloudfront_distribution.main.id}
     LAMBDA_FUNCTION_NAME       = ${aws_lambda_function.api.function_name}
+    THUMBNAIL_LAMBDA_NAME      = ${aws_lambda_function.thumbnail.function_name}
     DATABASE_URL               = postgresql://${var.db_username}:<YOUR_DB_PASSWORD>@${aws_db_instance.main.endpoint}/${var.db_name}
     ============================================
     

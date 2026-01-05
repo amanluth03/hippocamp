@@ -1,0 +1,6 @@
+# Dependencies for thumbnail Lambda
+# Note: Pillow must be compiled for Lambda's Linux environment
+# Use the provided Lambda layer or build with Docker
+
+Pillow>=10.0.0
+

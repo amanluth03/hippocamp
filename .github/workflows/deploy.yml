@@ -129,6 +129,35 @@ jobs:
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }}
 
   # ===========================================================================
+  # DEPLOY THUMBNAIL LAMBDA
+  # ===========================================================================
+  deploy-thumbnail:
+    name: Deploy Thumbnail Lambda
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment package
+        working-directory: backend/lambdas/thumbnail
+        run: zip -r handler.zip handler.py
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.THUMBNAIL_LAMBDA_NAME }} \
+            --zip-file fileb://backend/lambdas/thumbnail/handler.zip \
+            --publish
+
+  # ===========================================================================
   # RUN DATABASE MIGRATIONS
   # ===========================================================================
   run-migrations:
