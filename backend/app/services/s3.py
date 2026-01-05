@@ -154,9 +154,25 @@ class S3Service:
             )
     
     def get_photo_url(self, s3_key: str) -> str:
-        """Get the public URL for a photo via CloudFront."""
-        # Photos are served through CloudFront at /photos/ path
-        # CloudFront has access to the private S3 bucket via Origin Access Control
+        """Get the URL for a photo.
+        
+        - Production: Uses CloudFront URL (https://thehippocampus.net/photos/...)
+        - Development: Uses presigned S3 URL (direct S3 access)
+        """
+        # In development, use presigned URLs since local frontend can't serve S3 photos
+        if settings.DEBUG:
+            try:
+                url = self.s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': self.bucket_name, 'Key': s3_key},
+                    ExpiresIn=3600 * 24  # 24 hours
+                )
+                return url
+            except ClientError as e:
+                logger.error(f"Failed to generate presigned URL: {e}")
+                # Fall through to CloudFront URL
+        
+        # Production: Photos served through CloudFront at /photos/ path
         frontend_url = settings.FRONTEND_URL or "https://thehippocampus.net"
         return f"{frontend_url}/photos/{s3_key}"
 
