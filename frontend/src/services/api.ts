@@ -1,3 +1,5 @@
+import { compressImageForUpload } from "../utils/imageCompression";
+
 // API URL configuration
 // - Production: Uses /api path (same domain via CloudFront routing)
 // - Development: Uses localhost:8000 or network IP:8000
@@ -209,9 +211,12 @@ export async function uploadPhoto(
   eventId: string,
   file: File
 ): Promise<Photo> {
+  // Compress image before upload for faster transfer
+  const compressedFile = await compressImageForUpload(file);
+  
   const formData = new FormData();
   formData.append("event_id", eventId);
-  formData.append("file", file);
+  formData.append("file", compressedFile);
 
   const response = await fetch(`${API_URL}/photos/upload`, {
     method: "POST",
@@ -340,8 +345,11 @@ export async function uploadMemory(
   file: File,
   eventId?: string
 ): Promise<Memory> {
+  // Compress image before upload for faster transfer
+  const compressedFile = await compressImageForUpload(file);
+  
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", compressedFile);
   if (eventId) {
     formData.append("event_id", eventId);
   }
