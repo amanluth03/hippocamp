@@ -81,7 +81,9 @@ async def upload_memory(
         user_id=memory.user_id,
         event_id=memory.event_id,
         url=s3_service.get_photo_url(memory.s3_key),
-        thumbnail_url=None,
+        thumb_url=s3_service.get_thumb_url(memory.s3_key),
+        medium_url=s3_service.get_medium_url(memory.s3_key),
+        thumbnail_url=s3_service.get_thumb_url(memory.s3_key),  # Legacy
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
@@ -121,7 +123,9 @@ async def list_memories(
         result.append(MemoryListResponse(
             id=memory.id,
             url=s3_service.get_photo_url(memory.s3_key),
-            thumbnail_url=None,
+            thumb_url=s3_service.get_thumb_url(memory.s3_key),
+            medium_url=s3_service.get_medium_url(memory.s3_key),
+            thumbnail_url=s3_service.get_thumb_url(memory.s3_key),  # Legacy
             uploaded_at=memory.uploaded_at,
             event_id=memory.event_id,
             event_name=event_name,
@@ -153,7 +157,9 @@ async def get_memory(
         user_id=memory.user_id,
         event_id=memory.event_id,
         url=s3_service.get_photo_url(memory.s3_key),
-        thumbnail_url=None,
+        thumb_url=s3_service.get_thumb_url(memory.s3_key),
+        medium_url=s3_service.get_medium_url(memory.s3_key),
+        thumbnail_url=s3_service.get_thumb_url(memory.s3_key),  # Legacy
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
@@ -195,7 +201,9 @@ async def update_memory(
         user_id=memory.user_id,
         event_id=memory.event_id,
         url=s3_service.get_photo_url(memory.s3_key),
-        thumbnail_url=None,
+        thumb_url=s3_service.get_thumb_url(memory.s3_key),
+        medium_url=s3_service.get_medium_url(memory.s3_key),
+        thumbnail_url=s3_service.get_thumb_url(memory.s3_key),  # Legacy
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,

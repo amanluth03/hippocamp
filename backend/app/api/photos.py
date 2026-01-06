@@ -61,13 +61,15 @@ async def upload_photo(
     db.commit()
     db.refresh(photo)
     
-    # Return with URL
+    # Return with URLs (thumbnails generated async by S3 Lambda trigger)
     return PhotoResponse(
         id=photo.id,
         event_id=photo.event_id,
         uploaded_by=photo.uploaded_by,
         url=s3_service.get_photo_url(photo.s3_key),
-        thumbnail_url=None,  # TODO: Generate thumbnails later
+        thumb_url=s3_service.get_thumb_url(photo.s3_key),
+        medium_url=s3_service.get_medium_url(photo.s3_key),
+        thumbnail_url=s3_service.get_thumb_url(photo.s3_key),  # Legacy
         taken_at=photo.taken_at,
         uploaded_at=photo.uploaded_at,
         is_memory=photo.is_memory,
@@ -97,7 +99,9 @@ async def list_event_photos(
         PhotoListResponse(
             id=photo.id,
             url=s3_service.get_photo_url(photo.s3_key),
-            thumbnail_url=None,
+            thumb_url=s3_service.get_thumb_url(photo.s3_key),
+            medium_url=s3_service.get_medium_url(photo.s3_key),
+            thumbnail_url=s3_service.get_thumb_url(photo.s3_key),  # Legacy
             uploaded_at=photo.uploaded_at,
             uploader_name=user.name or user.email.split('@')[0],
             uploader_email=user.email,
@@ -129,7 +133,9 @@ async def get_photo(
         event_id=photo.event_id,
         uploaded_by=photo.uploaded_by,
         url=s3_service.get_photo_url(photo.s3_key),
-        thumbnail_url=None,
+        thumb_url=s3_service.get_thumb_url(photo.s3_key),
+        medium_url=s3_service.get_medium_url(photo.s3_key),
+        thumbnail_url=s3_service.get_thumb_url(photo.s3_key),  # Legacy
         taken_at=photo.taken_at,
         uploaded_at=photo.uploaded_at,
         is_memory=photo.is_memory,

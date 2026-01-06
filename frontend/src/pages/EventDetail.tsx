@@ -405,7 +405,7 @@ export function EventDetail({ token }: EventDetailProps) {
                   className="group relative aspect-square bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                 >
                   <img
-                    src={photo.url}
+                    src={photo.thumb_url || photo.url}
                     alt="Event photo"
                     className="w-full h-full object-cover"
                     loading="lazy"

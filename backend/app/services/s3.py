@@ -153,8 +153,8 @@ class S3Service:
                 detail=f"Failed to upload memory: {str(e)}",
             )
     
-    def get_photo_url(self, s3_key: str) -> str:
-        """Get the URL for a photo.
+    def _get_url(self, s3_key: str) -> str:
+        """Get the URL for an S3 key (internal helper).
         
         - Production: Uses CloudFront URL (https://thehippocampus.net/photos/...)
         - Development: Uses presigned S3 URL (direct S3 access)
@@ -175,6 +175,34 @@ class S3Service:
         # Production: Photos served through CloudFront at /photos/ path
         frontend_url = settings.FRONTEND_URL or "https://thehippocampus.net"
         return f"{frontend_url}/photos/{s3_key}"
+    
+    def get_photo_url(self, s3_key: str) -> str:
+        """Get the URL for the original photo."""
+        return self._get_url(s3_key)
+    
+    def get_thumbnail_key(self, s3_key: str, size: str = "thumb") -> str:
+        """Generate the S3 key for a thumbnail.
+        
+        Args:
+            s3_key: Original S3 key (e.g., memories/user123/20240101_abc.jpg)
+            size: "thumb" (300px) or "medium" (1200px)
+        
+        Returns:
+            Thumbnail key (e.g., memories/user123/20240101_abc_thumb.webp)
+        """
+        import os
+        base, _ = os.path.splitext(s3_key)
+        return f"{base}_{size}.webp"
+    
+    def get_thumb_url(self, s3_key: str) -> str:
+        """Get the URL for the thumbnail (300px) version."""
+        thumb_key = self.get_thumbnail_key(s3_key, "thumb")
+        return self._get_url(thumb_key)
+    
+    def get_medium_url(self, s3_key: str) -> str:
+        """Get the URL for the medium (1200px) version."""
+        medium_key = self.get_thumbnail_key(s3_key, "medium")
+        return self._get_url(medium_key)
 
     def delete_photo(self, s3_key: str) -> bool:
         """
