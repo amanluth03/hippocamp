@@ -2,15 +2,9 @@
 # THUMBNAIL GENERATOR LAMBDA
 # =============================================================================
 # Triggered by S3 uploads, generates thumbnail sizes for faster loading
-
-# Pillow Lambda Layer (community-maintained by Klayers)
-# https://github.com/keithrozario/Klayers
-# This provides Pillow compiled for Lambda's Linux environment
-data "aws_lambda_layer_version" "pillow" {
-  layer_name = "Klayers-p311-Pillow"
-  # Use the latest compatible version
-  # ARN: arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p311-Pillow:X
-}
+# 
+# NOTE: Pillow is bundled in the deployment package via CI/CD (built with Docker)
+# See: .github/workflows/deploy.yml - deploy-thumbnail job
 
 # Placeholder for thumbnail Lambda code
 data "archive_file" "thumbnail_placeholder" {
@@ -20,7 +14,7 @@ data "archive_file" "thumbnail_placeholder" {
   source {
     content  = <<-EOF
       def handler(event, context):
-          return {'statusCode': 200, 'body': 'Placeholder'}
+          return {'statusCode': 200, 'body': 'Placeholder - deploy via CI/CD'}
     EOF
     filename = "handler.py"
   }
@@ -35,12 +29,11 @@ resource "aws_lambda_function" "thumbnail" {
   timeout       = 60  # Image processing can take time
   memory_size   = 1024  # More memory = faster processing
 
-  # Placeholder - can be deployed via CI/CD or manually
+  # Placeholder - deployed via CI/CD with Pillow bundled
   filename         = data.archive_file.thumbnail_placeholder.output_path
   source_code_hash = data.archive_file.thumbnail_placeholder.output_base64sha256
 
-  # Use Pillow Lambda layer
-  layers = [data.aws_lambda_layer_version.pillow.arn]
+  # No layers - Pillow is bundled in deployment package
 
   environment {
     variables = {

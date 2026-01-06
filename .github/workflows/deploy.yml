@@ -139,9 +139,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create deployment package
+      - name: Build deployment package with Pillow
         working-directory: backend/lambdas/thumbnail
-        run: zip -r handler.zip handler.py
+        run: |
+          # Use Docker to build Pillow for Lambda's Linux environment
+          docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.11:latest \
+            pip install Pillow -t /var/task/package/
+          
+          # Copy handler to package
+          cp handler.py package/
+          
+          # Create zip
+          cd package && zip -r ../lambda.zip .
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -154,7 +163,7 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name ${{ secrets.THUMBNAIL_LAMBDA_NAME }} \
-            --zip-file fileb://backend/lambdas/thumbnail/handler.zip \
+            --zip-file fileb://backend/lambdas/thumbnail/lambda.zip \
             --publish
 
   # ===========================================================================
