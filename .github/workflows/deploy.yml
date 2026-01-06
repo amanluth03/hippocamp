@@ -142,9 +142,13 @@ jobs:
       - name: Build deployment package with Pillow
         working-directory: backend/lambdas/thumbnail
         run: |
+          # Create package directory first
+          mkdir -p package
+          
           # Use Docker to build Pillow for Lambda's Linux environment
-          docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.11:latest \
-            pip install Pillow -t /var/task/package/
+          # Run as current user to avoid permission issues
+          docker run --rm -v "$PWD":/var/task -u "$(id -u):$(id -g)" public.ecr.aws/sam/build-python3.11:latest \
+            pip install Pillow -t /var/task/package/ --no-cache-dir
           
           # Copy handler to package
           cp handler.py package/
