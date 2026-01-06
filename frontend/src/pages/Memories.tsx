@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Memory, getMemories, uploadMemory, deleteMemory, getEvents, Event } from "../services/api";
 import { Spinner } from "../components/Spinner";
 import { PhotoModal } from "../components/PhotoModal";
+import { PhotoSkeleton } from "../components/PhotoSkeleton";
 
 interface MemoriesProps {
   token: string | null;
@@ -180,9 +181,8 @@ export function Memories({ token }: MemoriesProps) {
 
         {/* Memories Grid */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Spinner size="lg" />
-            <p className="text-gray-400">Loading memories...</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <PhotoSkeleton count={15} />
           </div>
         ) : memories.length === 0 ? (
           <div className="text-center py-16">

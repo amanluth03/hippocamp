@@ -1,12 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers, updateEvent, EventUpdate, deleteEvent } from "../services/api";
 import { PhotoModal } from "../components/PhotoModal";
 import { Spinner, LoadingScreen } from "../components/Spinner";
+import { PhotoSkeleton } from "../components/PhotoSkeleton";
 
 interface EventDetailProps {
   token: string | null;
 }
+
+const PHOTOS_PER_PAGE = 20;
 
 export function EventDetail({ token }: EventDetailProps) {
   const { eventId } = useParams<{ eventId: string }>();
@@ -16,6 +19,8 @@ export function EventDetail({ token }: EventDetailProps) {
   const [members, setMembers] = useState<EventMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [photosLoading, setPhotosLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [membersLoading, setMembersLoading] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -29,6 +34,7 @@ export function EventDetail({ token }: EventDetailProps) {
   const [uploading, setUploading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!token || !eventId) {
@@ -67,7 +73,7 @@ export function EventDetail({ token }: EventDetailProps) {
     };
   }, [token, eventId]);
 
-  // Load photos separately
+  // Load initial photos
   useEffect(() => {
     if (!token || !eventId || !event) {
       return;
@@ -75,12 +81,15 @@ export function EventDetail({ token }: EventDetailProps) {
 
     let cancelled = false;
     setPhotosLoading(true);
+    setPhotos([]);
+    setHasMore(true);
 
-    async function loadPhotos() {
+    async function loadInitialPhotos() {
       try {
-        const data = await getEventPhotos(token!, eventId!);
+        const response = await getEventPhotos(token!, eventId!, { limit: PHOTOS_PER_PAGE, offset: 0 });
         if (!cancelled) {
-          setPhotos(data);
+          setPhotos(response.photos);
+          setHasMore(response.has_more);
         }
       } catch (err) {
         console.error("Failed to load photos:", err);
@@ -91,12 +100,49 @@ export function EventDetail({ token }: EventDetailProps) {
       }
     }
 
-    loadPhotos();
+    loadInitialPhotos();
 
     return () => {
       cancelled = true;
     };
   }, [token, eventId, event]);
+
+  // Load more photos function
+  const loadMorePhotos = useCallback(async () => {
+    if (!token || !eventId || loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    try {
+      const response = await getEventPhotos(token, eventId, { 
+        limit: PHOTOS_PER_PAGE, 
+        offset: photos.length 
+      });
+      setPhotos(prev => [...prev, ...response.photos]);
+      setHasMore(response.has_more);
+    } catch (err) {
+      console.error("Failed to load more photos:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [token, eventId, loadingMore, hasMore, photos.length]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !photosLoading) {
+          loadMorePhotos();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, photosLoading, loadMorePhotos]);
 
   // Load members when modal opens
   useEffect(() => {
@@ -387,9 +433,9 @@ export function EventDetail({ token }: EventDetailProps) {
           </div>
           
           {photosLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Spinner size="md" />
-              <p className="text-gray-400">Loading photos...</p>
+            /* Skeleton loading - instant visual feedback */
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <PhotoSkeleton count={12} />
             </div>
           ) : photos.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
@@ -397,50 +443,59 @@ export function EventDetail({ token }: EventDetailProps) {
               <p>No photos yet. Be the first to upload!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {photos.map((photo) => (
-                <div
-                  key={photo.id}
-                  onClick={() => handlePhotoClick(photo)}
-                  className="group relative aspect-square bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
-                >
-                  <img
-                    src={photo.thumb_url || photo.url}
-                    alt="Event photo"
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      // Fall back to original URL if thumbnail doesn't exist
-                      const target = e.target as HTMLImageElement;
-                      if (target.src !== photo.url) {
-                        target.src = photo.url;
-                      }
-                    }}
-                  />
-                  {/* Overlay with uploader info */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                          {photo.uploader_name?.[0]?.toUpperCase() || photo.uploader_email?.[0]?.toUpperCase() || "?"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-medium truncate">
-                            {photo.uploader_name || photo.uploader_email || "Unknown"}
-                          </p>
-                          <p className="text-gray-300 text-xs">
-                            {new Date(photo.uploaded_at).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </p>
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    onClick={() => handlePhotoClick(photo)}
+                    className="group relative aspect-square bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
+                  >
+                    <img
+                      src={photo.thumb_url || photo.url}
+                      alt="Event photo"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        // Fall back to original URL if thumbnail doesn't exist
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== photo.url) {
+                          target.src = photo.url;
+                        }
+                      }}
+                    />
+                    {/* Overlay with uploader info */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                            {photo.uploader_name?.[0]?.toUpperCase() || photo.uploader_email?.[0]?.toUpperCase() || "?"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium truncate">
+                              {photo.uploader_name || photo.uploader_email || "Unknown"}
+                            </p>
+                            <p className="text-gray-300 text-xs">
+                              {new Date(photo.uploaded_at).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+                {/* Loading more skeletons */}
+                {loadingMore && <PhotoSkeleton count={4} />}
+              </div>
+              
+              {/* Infinite scroll trigger */}
+              {hasMore && (
+                <div ref={loadMoreRef} className="h-10 mt-4" />
+              )}
+            </>
           )}
         </div>
       </div>

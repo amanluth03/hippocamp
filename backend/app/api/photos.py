@@ -76,26 +76,39 @@ async def upload_photo(
     )
 
 
-@router.get("/event/{event_id}", response_model=List[PhotoListResponse])
+from pydantic import BaseModel
+
+class PaginatedPhotosResponse(BaseModel):
+    photos: List[PhotoListResponse]
+    total: int
+    has_more: bool
+
+
+@router.get("/event/{event_id}", response_model=PaginatedPhotosResponse)
 async def list_event_photos(
     event_id: uuid.UUID,
+    limit: int = 20,
+    offset: int = 0,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List all photos for an event."""
+    """List photos for an event with pagination."""
     # Verify membership
     check_event_membership(db, event_id, current_user.id)
     
-    # Get photos with uploader info
+    # Get total count first
+    total = db.query(Photo).filter(Photo.event_id == event_id).count()
+    
+    # Get paginated photos with uploader info
     photos = db.query(Photo, User).join(
         User, Photo.uploaded_by == User.id
     ).filter(
         Photo.event_id == event_id
     ).order_by(
         Photo.uploaded_at.desc()
-    ).all()
+    ).offset(offset).limit(limit).all()
     
-    return [
+    photo_list = [
         PhotoListResponse(
             id=photo.id,
             url=s3_service.get_photo_url(photo.s3_key),
@@ -108,6 +121,12 @@ async def list_event_photos(
         )
         for photo, user in photos
     ]
+    
+    return PaginatedPhotosResponse(
+        photos=photo_list,
+        total=total,
+        has_more=offset + len(photo_list) < total
+    )
 
 
 @router.get("/{photo_id}", response_model=PhotoResponse)

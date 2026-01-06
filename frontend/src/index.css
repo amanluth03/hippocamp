@@ -56,3 +56,17 @@ body {
 .fab-bottom {
   bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  animation: shimmer 1.5s infinite;
+}

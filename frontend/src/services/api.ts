@@ -235,11 +235,24 @@ export async function uploadPhoto(
   return response.json();
 }
 
+export interface PaginatedPhotosResponse {
+  photos: Photo[];
+  total: number;
+  has_more: boolean;
+}
+
 export async function getEventPhotos(
   token: string,
-  eventId: string
-): Promise<Photo[]> {
-  const response = await fetch(`${API_URL}/photos/event/${eventId}`, {
+  eventId: string,
+  options?: { limit?: number; offset?: number }
+): Promise<PaginatedPhotosResponse> {
+  const params = new URLSearchParams();
+  if (options?.limit) params.append("limit", options.limit.toString());
+  if (options?.offset) params.append("offset", options.offset.toString());
+  
+  const url = `${API_URL}/photos/event/${eventId}${params.toString() ? `?${params}` : ''}`;
+  
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
