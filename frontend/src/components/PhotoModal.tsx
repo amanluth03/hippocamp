@@ -113,6 +113,13 @@ export function PhotoModal({ photo, photos, onClose, onNavigate, onDelete }: Pho
           src={photo.medium_url || photo.url}
           alt="Full size photo"
           className="max-w-full max-h-[80vh] object-contain rounded-lg"
+          onError={(e) => {
+            // Fall back to original URL if medium doesn't exist
+            const target = e.target as HTMLImageElement;
+            if (target.src !== photo.url) {
+              target.src = photo.url;
+            }
+          }}
         />
 
         {/* Photo metadata */}

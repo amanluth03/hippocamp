@@ -211,6 +211,13 @@ export function Memories({ token }: MemoriesProps) {
                   alt="Memory"
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onError={(e) => {
+                    // Fall back to original URL if thumbnail doesn't exist
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== memory.url) {
+                      target.src = memory.url;
+                    }
+                  }}
                 />
                 {/* Event badge */}
                 {memory.event_name && (
