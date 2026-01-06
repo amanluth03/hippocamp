@@ -469,7 +469,8 @@ export function EventDetail({ token }: EventDetailProps) {
                 {photos.map((photo) => (
                   <LazyImage
                     key={photo.id}
-                    src={photo.url}
+                    src={photo.thumb_url || photo.url}
+                    fallbackSrc={photo.url}
                     alt="Event photo"
                     className="group relative aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                     onClick={() => handlePhotoClick(photo)}

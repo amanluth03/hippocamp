@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, ReactNode } from "react";
 
 interface LazyImageProps {
   src: string;
+  fallbackSrc?: string;  // Fallback URL if primary src fails (e.g., original image if thumbnail fails)
   alt?: string;
   className?: string;
   imgClassName?: string;
@@ -12,9 +13,11 @@ interface LazyImageProps {
 /**
  * LazyImage - Only loads image when it enters the viewport
  * Prevents overwhelming CDN with too many concurrent requests
+ * Supports fallback URL for graceful degradation (thumbnail -> original)
  */
 export function LazyImage({ 
   src, 
+  fallbackSrc,
   alt = "", 
   className = "", 
   imgClassName = "",
@@ -24,7 +27,17 @@ export function LazyImage({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const [triedFallback, setTriedFallback] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset state when src changes
+  useEffect(() => {
+    setCurrentSrc(src);
+    setIsLoaded(false);
+    setHasError(false);
+    setTriedFallback(false);
+  }, [src]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -46,6 +59,18 @@ export function LazyImage({
 
     return () => observer.disconnect();
   }, []);
+
+  const handleError = () => {
+    // If we have a fallback and haven't tried it yet, use it
+    if (fallbackSrc && !triedFallback && currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+      setTriedFallback(true);
+      setIsLoaded(false);
+    } else {
+      // No fallback or fallback also failed
+      setHasError(true);
+    }
+  };
 
   return (
     <div ref={containerRef} className={className} onClick={onClick}>
@@ -70,13 +95,13 @@ export function LazyImage({
           
           {/* Actual image */}
           <img
-            src={src}
+            src={currentSrc}
             alt={alt}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               isLoaded ? "opacity-100" : "opacity-0"
             } ${imgClassName}`}
             onLoad={() => setIsLoaded(true)}
-            onError={() => setHasError(true)}
+            onError={handleError}
           />
         </>
       )}

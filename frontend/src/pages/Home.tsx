@@ -224,7 +224,8 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
               {feedItems.map((item) => (
                 <LazyImage
                   key={item.id}
-                  src={item.url}
+                  src={item.thumbnail_url || item.url}
+                  fallbackSrc={item.url}
                   className="aspect-square cursor-pointer group relative overflow-hidden rounded-xl border border-white/10"
                   onClick={() => setSelectedItem(item)}
                 >

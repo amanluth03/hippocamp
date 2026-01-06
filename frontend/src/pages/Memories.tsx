@@ -204,7 +204,8 @@ export function Memories({ token }: MemoriesProps) {
             {memories.map((memory) => (
               <LazyImage
                 key={memory.id}
-                src={memory.url}
+                src={memory.thumb_url || memory.url}
+                fallbackSrc={memory.url}
                 alt="Memory"
                 className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all relative group"
                 onClick={() => setSelectedMemory(memory)}

@@ -121,7 +121,8 @@ export function Flashbacks({ token }: FlashbacksProps) {
                   {group.photos.map((photo) => (
                     <LazyImage
                       key={photo.id}
-                      src={photo.url}
+                      src={photo.thumbnail_url || photo.url}
+                      fallbackSrc={photo.url}
                       alt="Memory"
                       className="group relative aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                       onClick={() => setSelectedPhoto(photo)}
