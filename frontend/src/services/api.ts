@@ -197,8 +197,10 @@ export interface Photo {
   id: string;
   event_id: string;
   uploaded_by: string;
-  url: string;
-  thumbnail_url?: string;
+  url: string;  // Original full-size
+  thumb_url?: string;  // 300px thumbnail for grid
+  medium_url?: string;  // 1200px for detail view
+  thumbnail_url?: string;  // Legacy field
   taken_at?: string;
   uploaded_at: string;
   is_memory: boolean;
@@ -310,8 +312,10 @@ export interface Memory {
   id: string;
   user_id: string;
   event_id?: string;
-  url: string;
-  thumbnail_url?: string;
+  url: string;  // Original full-size
+  thumb_url?: string;  // 300px thumbnail for grid
+  medium_url?: string;  // 1200px for detail view
+  thumbnail_url?: string;  // Legacy field
   taken_at?: string;
   uploaded_at: string;
   event_name?: string;

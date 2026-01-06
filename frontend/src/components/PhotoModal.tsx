@@ -108,9 +108,9 @@ export function PhotoModal({ photo, photos, onClose, onNavigate, onDelete }: Pho
         className="relative max-w-7xl max-h-[90vh] flex flex-col items-center"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Image */}
+        {/* Image - Use medium_url for detail view, fall back to original */}
         <img
-          src={photo.url}
+          src={photo.medium_url || photo.url}
           alt="Full size photo"
           className="max-w-full max-h-[80vh] object-contain rounded-lg"
         />
