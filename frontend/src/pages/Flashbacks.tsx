@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getFlashbacks, FlashbacksResponse, FlashbackPhoto } from "../services/api";
 import { Spinner } from "../components/Spinner";
+import { LazyImage } from "../components/LazyImage";
 
 interface FlashbacksProps {
   token: string | null;
@@ -118,25 +119,15 @@ export function Flashbacks({ token }: FlashbacksProps) {
                 {/* Photos Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {group.photos.map((photo) => (
-                    <div
+                    <LazyImage
                       key={photo.id}
+                      src={photo.url}
+                      alt="Memory"
+                      className="group relative aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                       onClick={() => setSelectedPhoto(photo)}
-                      className="group relative aspect-square bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                     >
-                      <img
-                        src={photo.thumbnail_url || photo.url}
-                        alt="Memory"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          if (target.src !== photo.url) {
-                            target.src = photo.url;
-                          }
-                        }}
-                      />
                       {/* Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <div className="absolute bottom-0 left-0 right-0 p-3">
                           <p className="text-white text-sm font-medium truncate">
                             {photo.event_name}
@@ -146,7 +137,7 @@ export function Flashbacks({ token }: FlashbacksProps) {
                           </p>
                         </div>
                       </div>
-                    </div>
+                    </LazyImage>
                   ))}
                 </div>
               </div>

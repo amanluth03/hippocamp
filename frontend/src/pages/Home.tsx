@@ -4,6 +4,7 @@ import { User, getGoogleLoginUrl, getFeed, FeedItem } from "../services/api";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { Spinner } from "../components/Spinner";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
+import { LazyImage } from "../components/LazyImage";
 
 interface HomeProps {
   user: User | null;
@@ -221,25 +222,14 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
             {/* Photo grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {feedItems.map((item) => (
-                <div
+                <LazyImage
                   key={item.id}
+                  src={item.url}
+                  className="aspect-square cursor-pointer group relative overflow-hidden rounded-xl border border-white/10"
                   onClick={() => setSelectedItem(item)}
-                  className="aspect-square cursor-pointer group relative overflow-hidden rounded-xl bg-white/5 border border-white/10"
                 >
-                  <img
-                    src={item.thumbnail_url || item.url}
-                    alt=""
-                    className="w-full h-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      if (target.src !== item.url) {
-                        target.src = item.url;
-                      }
-                    }}
-                  />
                   {/* Overlay with info */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
                     <div className="absolute bottom-0 left-0 right-0 p-3">
                       <p className="text-white text-sm font-medium truncate">
                         {item.event_name || "Personal Memory"}
@@ -251,11 +241,11 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
                   </div>
                   {/* Badge for personal memories */}
                   {item.is_personal && (
-                    <div className="absolute top-2 right-2 bg-purple-500/80 text-white text-xs px-2 py-0.5 rounded-full">
+                    <div className="absolute top-2 right-2 bg-purple-500/80 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none z-10">
                       ✨ Memory
                     </div>
                   )}
-                </div>
+                </LazyImage>
               ))}
             </div>
 

@@ -4,6 +4,7 @@ import { Memory, getMemories, uploadMemory, deleteMemory, getEvents, Event } fro
 import { Spinner } from "../components/Spinner";
 import { PhotoModal } from "../components/PhotoModal";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
+import { LazyImage } from "../components/LazyImage";
 
 interface MemoriesProps {
   token: string | null;
@@ -201,35 +202,24 @@ export function Memories({ token }: MemoriesProps) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {memories.map((memory) => (
-              <div
+              <LazyImage
                 key={memory.id}
-                onClick={() => setSelectedMemory(memory)}
+                src={memory.url}
+                alt="Memory"
                 className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all relative group"
+                onClick={() => setSelectedMemory(memory)}
               >
-                <img
-                  src={memory.thumb_url || memory.url}
-                  alt="Memory"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    // Fall back to original URL if thumbnail doesn't exist
-                    const target = e.target as HTMLImageElement;
-                    if (target.src !== memory.url) {
-                      target.src = memory.url;
-                    }
-                  }}
-                />
                 {/* Event badge */}
                 {memory.event_name && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 pointer-events-none z-10">
                     <p className="text-white text-xs truncate">
                       📁 {memory.event_name}
                     </p>
                   </div>
                 )}
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-              </div>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none" />
+              </LazyImage>
             ))}
           </div>
         )}

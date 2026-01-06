@@ -4,6 +4,7 @@ import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, Event
 import { PhotoModal } from "../components/PhotoModal";
 import { Spinner, LoadingScreen } from "../components/Spinner";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
+import { LazyImage } from "../components/LazyImage";
 
 interface EventDetailProps {
   token: string | null;
@@ -466,26 +467,15 @@ export function EventDetail({ token }: EventDetailProps) {
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {photos.map((photo) => (
-                  <div
+                  <LazyImage
                     key={photo.id}
+                    src={photo.url}
+                    alt="Event photo"
+                    className="group relative aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                     onClick={() => handlePhotoClick(photo)}
-                    className="group relative aspect-square bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                   >
-                    <img
-                      src={photo.thumb_url || photo.url}
-                      alt="Event photo"
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        // Fall back to original URL if thumbnail doesn't exist
-                        const target = e.target as HTMLImageElement;
-                        if (target.src !== photo.url) {
-                          target.src = photo.url;
-                        }
-                      }}
-                    />
                     {/* Overlay with uploader info */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                       <div className="absolute bottom-0 left-0 right-0 p-3">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
@@ -505,7 +495,7 @@ export function EventDetail({ token }: EventDetailProps) {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </LazyImage>
                 ))}
                 {/* Loading more skeletons */}
                 {loadingMore && <PhotoSkeleton count={4} />}
