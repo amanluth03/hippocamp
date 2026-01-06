@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { User, getGoogleLoginUrl, getFeed, FeedItem } from "../services/api";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { Spinner } from "../components/Spinner";
+import { PhotoSkeleton } from "../components/PhotoSkeleton";
 
 interface HomeProps {
   user: User | null;
@@ -190,9 +191,8 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
 
         {/* Loading */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Spinner size="lg" />
-            <p className="text-gray-400">Loading your feed...</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <PhotoSkeleton count={12} />
           </div>
         ) : feedItems.length === 0 ? (
           <div className="text-center py-12">
@@ -218,19 +218,25 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
           </div>
         ) : (
           <>
-            {/* Masonry-style grid */}
-            <div className="columns-2 sm:columns-3 md:columns-4 gap-3 space-y-3">
+            {/* Photo grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {feedItems.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
-                  className="break-inside-avoid cursor-pointer group relative overflow-hidden rounded-xl"
+                  className="aspect-square cursor-pointer group relative overflow-hidden rounded-xl bg-white/5 border border-white/10"
                 >
                   <img
-                    src={item.url}
+                    src={item.thumbnail_url || item.url}
                     alt=""
-                    className="w-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== item.url) {
+                        target.src = item.url;
+                      }
+                    }}
                   />
                   {/* Overlay with info */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl">

@@ -230,30 +230,39 @@ export function EventDetail({ token }: EventDetailProps) {
   async function handleDeletePhoto(photoId: string) {
     if (!token) return;
     
-    await deletePhoto(token, photoId);
+    // Find next photo BEFORE deleting (use current photos array)
+    const currentIndex = photos.findIndex((p) => p.id === photoId);
+    const remainingPhotos = photos.filter((p) => p.id !== photoId);
     
-    // Update photos list
-    setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-    
-    // Update event photo count
-    if (event) {
-      setEvent({
-        ...event,
-        photo_count: Math.max(0, event.photo_count - 1),
-      });
+    // Determine what to show next
+    let nextPhoto: Photo | null = null;
+    if (remainingPhotos.length > 0) {
+      // Navigate to next photo if available, otherwise previous
+      if (currentIndex < remainingPhotos.length) {
+        nextPhoto = remainingPhotos[currentIndex];
+      } else {
+        nextPhoto = remainingPhotos[remainingPhotos.length - 1];
+      }
     }
     
-    // Close modal or navigate to next/prev photo
-    const currentIndex = photos.findIndex((p) => p.id === photoId);
-    if (photos.length <= 1) {
-      // No more photos, close modal
-      setSelectedPhoto(null);
-    } else if (currentIndex < photos.length - 1) {
-      // Navigate to next photo
-      setSelectedPhoto(photos[currentIndex + 1]);
-    } else {
-      // Navigate to previous photo
-      setSelectedPhoto(photos[currentIndex - 1]);
+    try {
+      await deletePhoto(token, photoId);
+      
+      // Update photos list
+      setPhotos(remainingPhotos);
+      
+      // Update event photo count
+      if (event) {
+        setEvent({
+          ...event,
+          photo_count: Math.max(0, event.photo_count - 1),
+        });
+      }
+      
+      // Navigate to next photo or close modal
+      setSelectedPhoto(nextPhoto);
+    } catch (err) {
+      console.error("Failed to delete photo:", err);
     }
   }
 

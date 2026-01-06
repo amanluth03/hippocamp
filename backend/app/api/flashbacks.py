@@ -19,6 +19,7 @@ class FlashbackPhoto(BaseModel):
     """A photo that's part of a flashback."""
     id: uuid.UUID
     url: str
+    thumbnail_url: Optional[str] = None
     uploaded_at: datetime
     years_ago: int
     event_id: uuid.UUID
@@ -115,6 +116,7 @@ async def get_flashbacks(
         flashback_photo = FlashbackPhoto(
             id=photo.id,
             url=s3_service.get_photo_url(photo.s3_key),
+            thumbnail_url=s3_service.get_thumb_url(photo.s3_key),
             uploaded_at=photo.uploaded_at,
             years_ago=years_ago,
             event_id=event.id,

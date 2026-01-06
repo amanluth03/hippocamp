@@ -286,6 +286,7 @@ export async function deletePhoto(
 export interface FlashbackPhoto {
   id: string;
   url: string;
+  thumbnail_url?: string;
   uploaded_at: string;
   years_ago: number;
   event_id: string;

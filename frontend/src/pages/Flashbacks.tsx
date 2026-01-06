@@ -124,10 +124,16 @@ export function Flashbacks({ token }: FlashbacksProps) {
                       className="group relative aspect-square bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer"
                     >
                       <img
-                        src={photo.url}
+                        src={photo.thumbnail_url || photo.url}
                         alt="Memory"
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== photo.url) {
+                            target.src = photo.url;
+                          }
+                        }}
                       />
                       {/* Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
