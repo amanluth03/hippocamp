@@ -230,20 +230,27 @@ export function EventDetail({ token }: EventDetailProps) {
   async function handleDeletePhoto(photoId: string) {
     if (!token) return;
     
-    // Find next photo BEFORE deleting (use current photos array)
+    // Find current index BEFORE deleting
     const currentIndex = photos.findIndex((p) => p.id === photoId);
+    if (currentIndex === -1) {
+      console.error("Photo not found in array");
+      setSelectedPhoto(null);
+      return;
+    }
+    
     const remainingPhotos = photos.filter((p) => p.id !== photoId);
     
-    // Determine what to show next
+    // Determine what to show next - safely
     let nextPhoto: Photo | null = null;
     if (remainingPhotos.length > 0) {
-      // Navigate to next photo if available, otherwise previous
-      if (currentIndex < remainingPhotos.length) {
-        nextPhoto = remainingPhotos[currentIndex];
-      } else {
-        nextPhoto = remainingPhotos[remainingPhotos.length - 1];
-      }
+      // If we were at or past the end, show the last photo
+      // Otherwise show the photo that "slides into" the current position
+      const nextIndex = Math.min(currentIndex, remainingPhotos.length - 1);
+      nextPhoto = remainingPhotos[nextIndex] || null;
     }
+    
+    // Close modal FIRST to avoid rendering issues
+    setSelectedPhoto(null);
     
     try {
       await deletePhoto(token, photoId);
@@ -259,10 +266,14 @@ export function EventDetail({ token }: EventDetailProps) {
         });
       }
       
-      // Navigate to next photo or close modal
-      setSelectedPhoto(nextPhoto);
+      // Re-open modal with next photo after a brief delay to ensure clean state
+      if (nextPhoto) {
+        setTimeout(() => setSelectedPhoto(nextPhoto), 50);
+      }
     } catch (err) {
       console.error("Failed to delete photo:", err);
+      // Revert - re-fetch photos or restore state
+      setSelectedPhoto(photos[currentIndex] || null);
     }
   }
 
