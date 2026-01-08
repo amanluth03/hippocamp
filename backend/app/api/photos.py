@@ -1,7 +1,7 @@
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,6 +9,7 @@ from app.core.security import get_current_user
 from app.models import User, Event, EventMember, Photo
 from app.schemas.photo import PhotoResponse, PhotoListResponse
 from app.services.s3 import s3_service
+from app.services.ai_analysis import analyze_photo_background
 
 router = APIRouter(prefix="/photos", tags=["Photos"])
 
@@ -39,6 +40,7 @@ def check_event_membership(db: Session, event_id: uuid.UUID, user_id: uuid.UUID)
 
 @router.post("/upload", response_model=PhotoResponse, status_code=status.HTTP_201_CREATED)
 async def upload_photo(
+    background_tasks: BackgroundTasks,
     event_id: uuid.UUID = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -61,7 +63,11 @@ async def upload_photo(
     db.commit()
     db.refresh(photo)
     
+    # Trigger AI analysis in background (doesn't block response)
+    background_tasks.add_task(analyze_photo_background, photo.id, photo.s3_key)
+    
     # Return with URLs (thumbnails generated async by S3 Lambda trigger)
+    # Note: ai_labels/ai_description will be None initially, populated by background task
     return PhotoResponse(
         id=photo.id,
         event_id=photo.event_id,
@@ -73,6 +79,9 @@ async def upload_photo(
         taken_at=photo.taken_at,
         uploaded_at=photo.uploaded_at,
         is_memory=photo.is_memory,
+        ai_labels=photo.ai_labels,
+        ai_description=photo.ai_description,
+        ai_processed_at=photo.ai_processed_at,
     )
 
 
@@ -118,6 +127,8 @@ async def list_event_photos(
             uploaded_at=photo.uploaded_at,
             uploader_name=user.name or user.email.split('@')[0],
             uploader_email=user.email,
+            ai_labels=photo.ai_labels,
+            ai_description=photo.ai_description,
         )
         for photo, user in photos
     ]
@@ -158,6 +169,9 @@ async def get_photo(
         taken_at=photo.taken_at,
         uploaded_at=photo.uploaded_at,
         is_memory=photo.is_memory,
+        ai_labels=photo.ai_labels,
+        ai_description=photo.ai_description,
+        ai_processed_at=photo.ai_processed_at,
     )
 
 

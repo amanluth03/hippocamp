@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,6 +9,7 @@ from app.core.security import get_current_user
 from app.models import User, Event, EventMember, Memory, Photo
 from app.schemas.memory import MemoryResponse, MemoryListResponse
 from app.services.s3 import s3_service
+from app.services.ai_analysis import analyze_memory_background, analyze_photo_background
 
 router = APIRouter(prefix="/memories", tags=["Memories"])
 
@@ -39,6 +40,7 @@ def check_event_membership(db: Session, event_id: uuid.UUID, user_id: uuid.UUID)
 
 @router.post("/upload", response_model=MemoryResponse, status_code=status.HTTP_201_CREATED)
 async def upload_memory(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     event_id: Optional[uuid.UUID] = Form(None),  # Optional: link to an event
     current_user: User = Depends(get_current_user),
@@ -65,6 +67,7 @@ async def upload_memory(
     db.add(memory)
     
     # If linked to an event, also create a Photo record so it shows in event gallery
+    photo = None
     if event_id:
         photo = Photo(
             event_id=event_id,
@@ -76,6 +79,14 @@ async def upload_memory(
     db.commit()
     db.refresh(memory)
     
+    # Trigger AI analysis in background (doesn't block response)
+    background_tasks.add_task(analyze_memory_background, memory.id, memory.s3_key)
+    # Also analyze the photo record if linked to event
+    if photo:
+        db.refresh(photo)
+        background_tasks.add_task(analyze_photo_background, photo.id, photo.s3_key)
+    
+    # Note: ai_labels/ai_description will be None initially, populated by background task
     return MemoryResponse(
         id=memory.id,
         user_id=memory.user_id,
@@ -87,6 +98,9 @@ async def upload_memory(
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
+        ai_labels=memory.ai_labels,
+        ai_description=memory.ai_description,
+        ai_processed_at=memory.ai_processed_at,
     )
 
 
@@ -129,6 +143,8 @@ async def list_memories(
             uploaded_at=memory.uploaded_at,
             event_id=memory.event_id,
             event_name=event_name,
+            ai_labels=memory.ai_labels,
+            ai_description=memory.ai_description,
         ))
     
     return result
@@ -163,6 +179,9 @@ async def get_memory(
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
+        ai_labels=memory.ai_labels,
+        ai_description=memory.ai_description,
+        ai_processed_at=memory.ai_processed_at,
     )
 
 
@@ -207,6 +226,9 @@ async def update_memory(
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
+        ai_labels=memory.ai_labels,
+        ai_description=memory.ai_description,
+        ai_processed_at=memory.ai_processed_at,
     )
 
 

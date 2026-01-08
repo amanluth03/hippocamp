@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Optional
-from sqlalchemy import String, DateTime, ForeignKey, JSON
+from typing import Optional, List
+from sqlalchemy import String, DateTime, ForeignKey, JSON, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -24,6 +24,12 @@ class Memory(Base):
     taken_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     extra_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # EXIF data, etc.
+
+    # AI-generated metadata (from Bedrock Claude Vision)
+    ai_labels: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)  # ["beach", "sunset", "people"]
+    ai_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # "A sunset over the ocean with people on the beach"
+    ai_processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    ai_error: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # Error message if AI processing failed
 
     # Relationships
     user = relationship("User", back_populates="memories")

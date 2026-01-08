@@ -61,5 +61,16 @@ class Settings:
     AWS_S3_BUCKET: str = os.getenv("AWS_S3_BUCKET", "") or S3_BUCKET_NAME
     AWS_S3_REGION: str = os.getenv("AWS_S3_REGION", "") or AWS_REGION
 
+    # ==========================================================================
+    # AWS Bedrock (AI Image Analysis)
+    # ==========================================================================
+    # Model ID for Claude Haiku 4.5 (supports vision/image input)
+    BEDROCK_MODEL_ID: str = os.getenv(
+        "BEDROCK_MODEL_ID",
+        "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+    )
+    # Enable/disable AI analysis (useful for local dev without Bedrock access)
+    BEDROCK_ENABLED: bool = os.getenv("BEDROCK_ENABLED", "false").lower() == "true"
+
 
 settings = Settings()
