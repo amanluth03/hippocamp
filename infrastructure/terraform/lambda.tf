@@ -62,6 +62,30 @@ resource "aws_iam_role_policy" "lambda_s3" {
   })
 }
 
+# Bedrock access policy for Lambda (AI image analysis)
+resource "aws_iam_role_policy" "lambda_bedrock" {
+  name = "${var.app_name}-lambda-bedrock-policy"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel"
+        ]
+        Resource = [
+          # Claude Haiku 4.5 model (cross-region inference)
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+          # Also allow other Claude models in case we switch
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.*"
+        ]
+      }
+    ]
+  })
+}
+
 # =============================================================================
 # LAMBDA SECURITY GROUP
 # =============================================================================
@@ -115,6 +139,9 @@ resource "aws_lambda_function" "api" {
       AWS_S3_BUCKET        = aws_s3_bucket.photos.id
       AWS_S3_REGION        = var.aws_region
       FRONTEND_URL         = "https://${var.domain_name}"
+      # AI Image Analysis (Bedrock)
+      BEDROCK_ENABLED      = "true"
+      BEDROCK_MODEL_ID     = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
     }
   }
 
