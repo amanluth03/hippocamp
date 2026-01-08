@@ -77,9 +77,10 @@ resource "aws_iam_role_policy" "lambda_bedrock" {
         ]
         Resource = [
           # Claude Haiku 4.5 model (cross-region inference)
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/us.anthropic.claude-haiku-4-5-20251001-v1:0",
           # Also allow other Claude models in case we switch
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.*"
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.*",
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/us.anthropic.*"
         ]
       }
     ]
@@ -141,7 +142,7 @@ resource "aws_lambda_function" "api" {
       FRONTEND_URL         = "https://${var.domain_name}"
       # AI Image Analysis (Bedrock)
       BEDROCK_ENABLED      = "true"
-      BEDROCK_MODEL_ID     = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+      BEDROCK_MODEL_ID     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     }
   }
 
