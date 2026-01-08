@@ -67,6 +67,7 @@ async def upload_photo(
     background_tasks.add_task(analyze_photo_background, photo.id, photo.s3_key)
     
     # Return with URLs (thumbnails generated async by S3 Lambda trigger)
+    # Note: ai_labels/ai_description will be None initially, populated by background task
     return PhotoResponse(
         id=photo.id,
         event_id=photo.event_id,
@@ -78,6 +79,9 @@ async def upload_photo(
         taken_at=photo.taken_at,
         uploaded_at=photo.uploaded_at,
         is_memory=photo.is_memory,
+        ai_labels=photo.ai_labels,
+        ai_description=photo.ai_description,
+        ai_processed_at=photo.ai_processed_at,
     )
 
 
@@ -123,6 +127,8 @@ async def list_event_photos(
             uploaded_at=photo.uploaded_at,
             uploader_name=user.name or user.email.split('@')[0],
             uploader_email=user.email,
+            ai_labels=photo.ai_labels,
+            ai_description=photo.ai_description,
         )
         for photo, user in photos
     ]
@@ -163,6 +169,9 @@ async def get_photo(
         taken_at=photo.taken_at,
         uploaded_at=photo.uploaded_at,
         is_memory=photo.is_memory,
+        ai_labels=photo.ai_labels,
+        ai_description=photo.ai_description,
+        ai_processed_at=photo.ai_processed_at,
     )
 
 

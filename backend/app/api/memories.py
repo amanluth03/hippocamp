@@ -86,6 +86,7 @@ async def upload_memory(
         db.refresh(photo)
         background_tasks.add_task(analyze_photo_background, photo.id, photo.s3_key)
     
+    # Note: ai_labels/ai_description will be None initially, populated by background task
     return MemoryResponse(
         id=memory.id,
         user_id=memory.user_id,
@@ -97,6 +98,9 @@ async def upload_memory(
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
+        ai_labels=memory.ai_labels,
+        ai_description=memory.ai_description,
+        ai_processed_at=memory.ai_processed_at,
     )
 
 
@@ -139,6 +143,8 @@ async def list_memories(
             uploaded_at=memory.uploaded_at,
             event_id=memory.event_id,
             event_name=event_name,
+            ai_labels=memory.ai_labels,
+            ai_description=memory.ai_description,
         ))
     
     return result
@@ -173,6 +179,9 @@ async def get_memory(
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
+        ai_labels=memory.ai_labels,
+        ai_description=memory.ai_description,
+        ai_processed_at=memory.ai_processed_at,
     )
 
 
@@ -217,6 +226,9 @@ async def update_memory(
         taken_at=memory.taken_at,
         uploaded_at=memory.uploaded_at,
         extra_data=memory.extra_data,
+        ai_labels=memory.ai_labels,
+        ai_description=memory.ai_description,
+        ai_processed_at=memory.ai_processed_at,
     )
 
 

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 
 
@@ -16,6 +16,11 @@ class PhotoResponse(BaseModel):
     taken_at: Optional[datetime] = None
     uploaded_at: datetime
     is_memory: bool = False
+    
+    # AI-generated metadata
+    ai_labels: Optional[List[str]] = None  # ["beach", "sunset", "people"]
+    ai_description: Optional[str] = None  # Natural language description
+    ai_processed_at: Optional[datetime] = None  # When AI analysis completed
 
     class Config:
         from_attributes = True
@@ -31,6 +36,10 @@ class PhotoListResponse(BaseModel):
     uploaded_at: datetime
     uploader_name: str  # Name or email of the person who uploaded
     uploader_email: str
+    
+    # AI-generated metadata
+    ai_labels: Optional[List[str]] = None  # ["beach", "sunset", "people"]
+    ai_description: Optional[str] = None  # Natural language description
 
     class Config:
         from_attributes = True

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, List
 from pydantic import BaseModel
 
 
@@ -21,6 +21,11 @@ class MemoryResponse(BaseModel):
     taken_at: Optional[datetime] = None
     uploaded_at: datetime
     extra_data: Optional[dict[str, Any]] = None
+    
+    # AI-generated metadata
+    ai_labels: Optional[List[str]] = None  # ["beach", "sunset", "people"]
+    ai_description: Optional[str] = None  # Natural language description
+    ai_processed_at: Optional[datetime] = None  # When AI analysis completed
 
     class Config:
         from_attributes = True
@@ -36,6 +41,10 @@ class MemoryListResponse(BaseModel):
     uploaded_at: datetime
     event_id: Optional[uuid.UUID] = None
     event_name: Optional[str] = None  # If linked to an event
+    
+    # AI-generated metadata
+    ai_labels: Optional[List[str]] = None  # ["beach", "sunset", "people"]
+    ai_description: Optional[str] = None  # Natural language description
 
     class Config:
         from_attributes = True
