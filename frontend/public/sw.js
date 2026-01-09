@@ -1,5 +1,5 @@
 // Hippo Campus Service Worker
-const CACHE_NAME = 'hippo-campus-v1';
+const CACHE_NAME = 'hippo-campus-v2';
 const SHARE_TARGET_CACHE = 'share-target-cache';
 
 // Assets to cache on install
@@ -56,6 +56,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip API requests (don't cache)
   if (event.request.url.includes('/api/') || event.request.url.includes('localhost:8000')) {
+    return;
+  }
+
+  // Skip photo requests - always fetch fresh from CDN
+  if (event.request.url.includes('/photos/')) {
     return;
   }
 
