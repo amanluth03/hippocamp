@@ -76,10 +76,9 @@ resource "aws_iam_role_policy" "lambda_bedrock" {
           "bedrock:InvokeModel"
         ]
         Resource = [
-          # Cross-region inference profiles (us.* models)
-          "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/us.anthropic.*",
-          # Foundation models (direct, non-cross-region)
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.*"
+          # Allow all Anthropic models in all regions (cross-region inference routes dynamically)
+          "arn:aws:bedrock:*::foundation-model/anthropic.*",
+          "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/*"
         ]
       }
     ]
