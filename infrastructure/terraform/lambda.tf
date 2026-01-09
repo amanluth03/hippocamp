@@ -76,11 +76,10 @@ resource "aws_iam_role_policy" "lambda_bedrock" {
           "bedrock:InvokeModel"
         ]
         Resource = [
-          # Claude Haiku 4.5 model (cross-region inference)
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/us.anthropic.claude-haiku-4-5-20251001-v1:0",
-          # Also allow other Claude models in case we switch
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.*",
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/us.anthropic.*"
+          # Cross-region inference profiles (us.* models)
+          "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/us.anthropic.*",
+          # Foundation models (direct, non-cross-region)
+          "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.*"
         ]
       }
     ]
