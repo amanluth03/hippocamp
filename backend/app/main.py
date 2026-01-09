@@ -12,10 +12,18 @@ from app.api.flashbacks import router as flashbacks_router
 from app.api.memories import router as memories_router
 from app.api.feed import router as feed_router
 
+# In production, CloudFront routes /api/* to Lambda, so docs need to be at /api/docs
+docs_url = "/api/docs" if not settings.DEBUG else "/docs"
+redoc_url = "/api/redoc" if not settings.DEBUG else "/redoc"
+openapi_url = "/api/openapi.json" if not settings.DEBUG else "/openapi.json"
+
 app = FastAPI(
     title="Hippo Campus API",
     description="Photo sharing and memory saving application",
     version="0.1.0",
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url=openapi_url,
 )
 
 # CORS middleware for frontend
