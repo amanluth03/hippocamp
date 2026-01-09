@@ -241,7 +241,7 @@ export function Memories({ token }: MemoriesProps) {
             id: selectedMemory.id,
             event_id: selectedMemory.event_id || "",
             uploaded_by: "",
-            url: selectedMemory.medium_url || selectedMemory.url,  // Use medium for detail view
+            url: selectedMemory.url,  // Keep original URL for fallback
             thumb_url: selectedMemory.thumb_url,
             medium_url: selectedMemory.medium_url,
             thumbnail_url: selectedMemory.thumbnail_url,
@@ -254,7 +254,7 @@ export function Memories({ token }: MemoriesProps) {
             id: m.id,
             event_id: m.event_id || "",
             uploaded_by: "",
-            url: m.medium_url || m.url,  // Use medium for detail view
+            url: m.url,  // Keep original URL for fallback
             thumb_url: m.thumb_url,
             medium_url: m.medium_url,
             thumbnail_url: m.thumbnail_url,

@@ -87,7 +87,7 @@ resource "aws_s3_bucket_notification" "photos_upload" {
     # Filter by prefix to include both events/ and memories/ folders
     filter_prefix = ""
     
-    # Only process image files
+    # Only process image files (lowercase)
     filter_suffix = ".jpg"
   }
 
@@ -113,6 +113,31 @@ resource "aws_s3_bucket_notification" "photos_upload" {
     lambda_function_arn = aws_lambda_function.thumbnail.arn
     events              = ["s3:ObjectCreated:*"]
     filter_suffix       = ".heic"
+  }
+
+  # Uppercase variants (iPhone often uses uppercase extensions)
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.thumbnail.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_suffix       = ".JPG"
+  }
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.thumbnail.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_suffix       = ".JPEG"
+  }
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.thumbnail.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_suffix       = ".PNG"
+  }
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.thumbnail.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_suffix       = ".HEIC"
   }
 
   depends_on = [aws_lambda_permission.s3_invoke_thumbnail]
