@@ -29,6 +29,10 @@ class FeedItem(BaseModel):
     
     # For memories
     is_personal: bool = False
+    
+    # AI-generated metadata
+    ai_labels: Optional[List[str]] = None
+    ai_description: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -52,6 +56,10 @@ class SearchResultItem(BaseModel):
     event_name: Optional[str] = None
     uploader_name: Optional[str] = None
     is_personal: bool = False
+    
+    # AI-generated metadata
+    ai_labels: Optional[List[str]] = None
+    ai_description: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -123,6 +131,8 @@ async def search_photos(
                 event_name=events_map.get(memory.event_id),
                 uploader_name="You",
                 is_personal=True,
+                ai_labels=memory.ai_labels,
+                ai_description=memory.ai_description,
             ))
     
     # Search photos from events user is a member of
@@ -166,6 +176,8 @@ async def search_photos(
                         event_name=events_map.get(photo.event_id, "Unknown Event"),
                         uploader_name="You" if is_personal else users_map.get(photo.uploaded_by, "Unknown"),
                         is_personal=is_personal,
+                        ai_labels=photo.ai_labels,
+                        ai_description=photo.ai_description,
                     ))
     
     # Sort all results by uploaded_at (newest first)
@@ -230,6 +242,8 @@ async def get_feed(
                 event_name=events_map.get(photo.event_id, "Unknown Event"),
                 uploader_name=users_map.get(photo.uploaded_by, "Unknown"),
                 is_personal=False,
+                ai_labels=photo.ai_labels,
+                ai_description=photo.ai_description,
             ))
     
     # Build a list of feed items from personal memories
@@ -256,6 +270,8 @@ async def get_feed(
             event_name=event_name,
             uploader_name="You",
             is_personal=True,
+            ai_labels=memory.ai_labels,
+            ai_description=memory.ai_description,
         ))
     
     # Combine and sort by uploaded_at (newest first)
