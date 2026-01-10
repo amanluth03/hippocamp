@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, getGoogleLoginUrl, getFeed, FeedItem } from "../services/api";
+import { User, getGoogleLoginUrl, getFeed, FeedItem, searchPhotos, SearchResultItem } from "../services/api";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { Spinner } from "../components/Spinner";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
@@ -110,6 +110,13 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
   const [offset, setOffset] = useState(0);
   const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
   const { isSupported, permission, requestPermission } = usePushNotifications();
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadFeed = useCallback(async (isLoadMore = false) => {
     if (!token) return;
@@ -141,6 +148,48 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
     }
   }, [token, offset]);
 
+  // Search handler with debounce
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    if (!query.trim()) {
+      setIsSearchMode(false);
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearchMode(true);
+    setIsSearching(true);
+    
+    // Debounce search by 300ms
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await searchPhotos(token, query.trim());
+        setSearchResults(response.results);
+      } catch (err) {
+        console.error("Search failed:", err);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+  }, [token]);
+
+  // Clear search
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setIsSearchMode(false);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  }, []);
+
   useEffect(() => {
     loadFeed();
   }, [token]);
@@ -169,12 +218,48 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
             </button>
           </div>
         </div>
+        
+        {/* Search Bar */}
+        <div className="max-w-4xl mx-auto mt-3">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search photos... (e.g., beach, birthday, sunset)"
+              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+            />
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Content */}
       <div className="px-4 py-4 max-w-4xl mx-auto">
-        {/* Notification prompt */}
-        {isSupported && permission !== 'granted' && (
+        {/* Notification prompt - only show when not searching */}
+        {!isSearchMode && isSupported && permission !== 'granted' && (
           <button
             onClick={requestPermission}
             className="w-full mb-4 p-3 bg-purple-500/20 border border-purple-500/30 rounded-xl text-purple-300 text-sm flex items-center justify-center gap-2 hover:bg-purple-500/30 transition-colors"
@@ -184,89 +269,176 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
         )}
 
         {/* Error */}
-        {error && (
+        {error && !isSearchMode && (
           <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
             {error}
           </div>
         )}
 
-        {/* Loading */}
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            <PhotoSkeleton count={12} />
-          </div>
-        ) : feedItems.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📸</div>
-            <h2 className="text-xl font-semibold text-white mb-2">Your feed is empty</h2>
-            <p className="text-gray-400 mb-6">
-              Start by saving memories or joining events!
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                to="/memories"
-                className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-semibold"
-              >
-                📸 Save a Memory
-              </Link>
-              <Link
-                to="/events"
-                className="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl font-semibold"
-              >
-                📅 Browse Events
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Photo grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {feedItems.map((item) => (
-                <LazyImage
-                  key={item.id}
-                  src={item.thumbnail_url || item.url}
-                  fallbackSrc={item.url}
-                  className="aspect-square cursor-pointer group relative overflow-hidden rounded-xl border border-white/10"
-                  onClick={() => setSelectedItem(item)}
-                >
-                  {/* Overlay with info */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className="text-white text-sm font-medium truncate">
-                        {item.event_name || "Personal Memory"}
-                      </p>
-                      <p className="text-gray-300 text-xs">
-                        {item.is_personal ? "You" : item.uploader_name}
-                      </p>
-                    </div>
-                  </div>
-                  {/* Badge for personal memories */}
-                  {item.is_personal && (
-                    <div className="absolute top-2 right-2 bg-purple-500/80 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none z-10">
-                      ✨ Memory
-                    </div>
-                  )}
-                </LazyImage>
-              ))}
+        {/* Search Results */}
+        {isSearchMode ? (
+          <div>
+            {/* Search header */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-gray-400 text-sm">
+                {isSearching ? (
+                  "Searching..."
+                ) : searchResults.length > 0 ? (
+                  <>Found <span className="text-white font-medium">{searchResults.length}</span> photos for "<span className="text-purple-400">{searchQuery}</span>"</>
+                ) : (
+                  <>No photos found for "<span className="text-purple-400">{searchQuery}</span>"</>
+                )}
+              </p>
             </div>
 
-            {/* Load more */}
-            {hasMore && (
-              <div className="flex justify-center mt-6">
-                <button
-                  onClick={() => loadFeed(true)}
-                  disabled={loadingMore}
-                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {loadingMore ? (
-                    <>
-                      <Spinner size="sm" /> Loading...
-                    </>
-                  ) : (
-                    "Load More"
-                  )}
-                </button>
+            {/* Search results grid */}
+            {isSearching ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <PhotoSkeleton count={8} />
               </div>
+            ) : searchResults.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🔍</div>
+                <h2 className="text-xl font-semibold text-white mb-2">No matches found</h2>
+                <p className="text-gray-400 mb-2">
+                  Try searching for different terms like:
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {["beach", "birthday", "sunset", "friends", "food"].map((term) => (
+                    <button
+                      key={term}
+                      onClick={() => handleSearch(term)}
+                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-gray-300 rounded-full text-sm transition-colors"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {searchResults.map((item) => (
+                  <LazyImage
+                    key={item.id}
+                    src={item.thumbnail_url || item.url}
+                    fallbackSrc={item.url}
+                    className="aspect-square cursor-pointer group relative overflow-hidden rounded-xl border border-white/10"
+                    onClick={() => setSelectedItem({
+                      id: item.id,
+                      type: item.type,
+                      url: item.url,
+                      thumbnail_url: item.thumbnail_url,
+                      uploaded_at: item.uploaded_at,
+                      event_id: item.event_id,
+                      event_name: item.event_name,
+                      uploader_name: item.uploader_name,
+                      is_personal: item.is_personal,
+                    })}
+                  >
+                    {/* Overlay with info */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p className="text-white text-sm font-medium truncate">
+                          {item.event_name || "Personal Memory"}
+                        </p>
+                        <p className="text-gray-300 text-xs">
+                          {item.is_personal ? "You" : item.uploader_name}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Badge for personal memories */}
+                    {item.is_personal && (
+                      <div className="absolute top-2 right-2 bg-purple-500/80 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none z-10">
+                        ✨ Memory
+                      </div>
+                    )}
+                  </LazyImage>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Normal Feed View */
+          <>
+            {/* Loading */}
+            {loading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <PhotoSkeleton count={12} />
+              </div>
+            ) : feedItems.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📸</div>
+                <h2 className="text-xl font-semibold text-white mb-2">Your feed is empty</h2>
+                <p className="text-gray-400 mb-6">
+                  Start by saving memories or joining events!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link
+                    to="/memories"
+                    className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-semibold"
+                  >
+                    📸 Save a Memory
+                  </Link>
+                  <Link
+                    to="/events"
+                    className="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl font-semibold"
+                  >
+                    📅 Browse Events
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Photo grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {feedItems.map((item) => (
+                    <LazyImage
+                      key={item.id}
+                      src={item.thumbnail_url || item.url}
+                      fallbackSrc={item.url}
+                      className="aspect-square cursor-pointer group relative overflow-hidden rounded-xl border border-white/10"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      {/* Overlay with info */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <p className="text-white text-sm font-medium truncate">
+                            {item.event_name || "Personal Memory"}
+                          </p>
+                          <p className="text-gray-300 text-xs">
+                            {item.is_personal ? "You" : item.uploader_name}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Badge for personal memories */}
+                      {item.is_personal && (
+                        <div className="absolute top-2 right-2 bg-purple-500/80 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none z-10">
+                          ✨ Memory
+                        </div>
+                      )}
+                    </LazyImage>
+                  ))}
+                </div>
+
+                {/* Load more */}
+                {hasMore && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={() => loadFeed(true)}
+                      disabled={loadingMore}
+                      className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <Spinner size="sm" /> Loading...
+                        </>
+                      ) : (
+                        "Load More"
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
