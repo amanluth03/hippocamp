@@ -442,6 +442,8 @@ export interface FeedItem {
   event_name?: string;
   uploader_name?: string;
   is_personal: boolean;
+  ai_labels?: string[];
+  ai_description?: string;
 }
 
 export interface FeedResponse {
@@ -482,6 +484,8 @@ export interface SearchResultItem {
   event_name?: string;
   uploader_name?: string;
   is_personal: boolean;
+  ai_labels?: string[];
+  ai_description?: string;
 }
 
 export interface SearchResponse {
