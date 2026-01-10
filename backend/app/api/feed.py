@@ -41,6 +41,146 @@ class FeedResponse(BaseModel):
     next_offset: int
 
 
+class SearchResultItem(BaseModel):
+    """A single search result item."""
+    id: str
+    type: str  # "event_photo" or "memory"
+    url: str
+    thumbnail_url: Optional[str] = None
+    uploaded_at: datetime
+    event_id: Optional[str] = None
+    event_name: Optional[str] = None
+    uploader_name: Optional[str] = None
+    is_personal: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class SearchResponse(BaseModel):
+    """Search results response."""
+    query: str
+    results: List[SearchResultItem]
+    total: int
+
+
+@router.get("/search", response_model=SearchResponse)
+async def search_photos(
+    q: str = Query(..., min_length=1, max_length=100, description="Search query"),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Search across all photos the user has access to (their memories + event photos).
+    Searches against AI-generated labels and descriptions.
+    """
+    from sqlalchemy import or_, func, cast, String
+    
+    search_term = q.lower().strip()
+    
+    # Get all event IDs the user is a member of
+    member_event_ids = db.query(EventMember.event_id).filter(
+        EventMember.user_id == current_user.id
+    ).all()
+    event_ids = [e[0] for e in member_event_ids]
+    
+    results = []
+    seen_urls = set()  # Deduplicate by URL
+    
+    # Search user's memories
+    memories = db.query(Memory).filter(
+        Memory.user_id == current_user.id,
+        Memory.ai_labels.isnot(None),  # Only search AI-processed photos
+        or_(
+            # Search in labels (JSON array) - cast to string and search
+            cast(Memory.ai_labels, String).ilike(f"%{search_term}%"),
+            # Search in description
+            Memory.ai_description.ilike(f"%{search_term}%"),
+        )
+    ).order_by(Memory.uploaded_at.desc()).limit(limit).all()
+    
+    # Pre-fetch event names for memories
+    memory_event_ids = [m.event_id for m in memories if m.event_id]
+    events_map = {}
+    if memory_event_ids:
+        for event_id in set(memory_event_ids):
+            event = db.query(Event).filter(Event.id == event_id).first()
+            if event:
+                events_map[event_id] = event.name
+    
+    for memory in memories:
+        url = s3_service.get_photo_url(memory.s3_key)
+        if url not in seen_urls:
+            seen_urls.add(url)
+            results.append(SearchResultItem(
+                id=f"memory_{memory.id}",
+                type="memory",
+                url=url,
+                thumbnail_url=s3_service.get_thumb_url(memory.s3_key),
+                uploaded_at=memory.uploaded_at,
+                event_id=str(memory.event_id) if memory.event_id else None,
+                event_name=events_map.get(memory.event_id),
+                uploader_name="You",
+                is_personal=True,
+            ))
+    
+    # Search photos from events user is a member of
+    if event_ids:
+        photos = db.query(Photo).filter(
+            Photo.event_id.in_(event_ids),
+            Photo.ai_labels.isnot(None),  # Only search AI-processed photos
+            or_(
+                cast(Photo.ai_labels, String).ilike(f"%{search_term}%"),
+                Photo.ai_description.ilike(f"%{search_term}%"),
+            )
+        ).order_by(Photo.uploaded_at.desc()).limit(limit).all()
+        
+        # Pre-fetch events and uploaders
+        if photos:
+            for event_id in set(event_ids):
+                if event_id not in events_map:
+                    event = db.query(Event).filter(Event.id == event_id).first()
+                    if event:
+                        events_map[event_id] = event.name
+            
+            users_map = {}
+            uploader_ids = list(set(p.uploaded_by for p in photos))
+            for uid in uploader_ids:
+                user = db.query(User).filter(User.id == uid).first()
+                if user:
+                    users_map[uid] = user.name or user.email
+            
+            for photo in photos:
+                url = s3_service.get_photo_url(photo.s3_key)
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    is_personal = photo.uploaded_by == current_user.id
+                    results.append(SearchResultItem(
+                        id=f"photo_{photo.id}",
+                        type="event_photo",
+                        url=url,
+                        thumbnail_url=s3_service.get_thumb_url(photo.s3_key),
+                        uploaded_at=photo.uploaded_at,
+                        event_id=str(photo.event_id),
+                        event_name=events_map.get(photo.event_id, "Unknown Event"),
+                        uploader_name="You" if is_personal else users_map.get(photo.uploaded_by, "Unknown"),
+                        is_personal=is_personal,
+                    ))
+    
+    # Sort all results by uploaded_at (newest first)
+    results.sort(key=lambda x: x.uploaded_at, reverse=True)
+    
+    # Apply limit
+    results = results[:limit]
+    
+    return SearchResponse(
+        query=q,
+        results=results,
+        total=len(results),
+    )
+
+
 @router.get("", response_model=FeedResponse)
 async def get_feed(
     limit: int = Query(20, ge=1, le=50),

@@ -471,3 +471,44 @@ export async function getFeed(
   return response.json();
 }
 
+// Search API
+export interface SearchResultItem {
+  id: string;
+  type: "event_photo" | "memory";
+  url: string;
+  thumbnail_url?: string;
+  uploaded_at: string;
+  event_id?: string;
+  event_name?: string;
+  uploader_name?: string;
+  is_personal: boolean;
+}
+
+export interface SearchResponse {
+  query: string;
+  results: SearchResultItem[];
+  total: number;
+}
+
+export async function searchPhotos(
+  token: string,
+  query: string,
+  limit: number = 50
+): Promise<SearchResponse> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: limit.toString(),
+  });
+
+  const response = await fetch(`${API_URL}/feed/search?${params}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to search photos");
+  }
+
+  return response.json();
+}
