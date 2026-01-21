@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, getGoogleLoginUrl, getFeed, FeedItem, searchPhotos, SearchResultItem } from "../services/api";
+import { User, getGoogleLoginUrl, getFeed, FeedItem, searchPhotos, SearchResultItem, SearchInterpretation } from "../services/api";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { Spinner } from "../components/Spinner";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
@@ -114,6 +114,7 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [searchInterpretation, setSearchInterpretation] = useState<SearchInterpretation | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -160,6 +161,7 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
     if (!query.trim()) {
       setIsSearchMode(false);
       setSearchResults([]);
+      setSearchInterpretation(null);
       return;
     }
     
@@ -171,9 +173,11 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
       try {
         const response = await searchPhotos(token, query.trim());
         setSearchResults(response.results);
+        setSearchInterpretation(response.interpretation || null);
       } catch (err) {
         console.error("Search failed:", err);
         setSearchResults([]);
+        setSearchInterpretation(null);
       } finally {
         setIsSearching(false);
       }
@@ -184,6 +188,7 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
   const clearSearch = useCallback(() => {
     setSearchQuery("");
     setSearchResults([]);
+    setSearchInterpretation(null);
     setIsSearchMode(false);
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -226,7 +231,7 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search photos... (e.g., beach, birthday, sunset)"
+              placeholder="Try: beach, last week, summer 2025, happy moments..."
               className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
             />
             <svg
@@ -279,16 +284,39 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
         {isSearchMode ? (
           <div>
             {/* Search header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4">
               <p className="text-gray-400 text-sm">
                 {isSearching ? (
-                  "Searching..."
+                  "Understanding your search..."
                 ) : searchResults.length > 0 ? (
-                  <>Found <span className="text-white font-medium">{searchResults.length}</span> photos for "<span className="text-purple-400">{searchQuery}</span>"</>
+                  <>Found <span className="text-white font-medium">{searchResults.length}</span> photos</>
                 ) : (
-                  <>No photos found for "<span className="text-purple-400">{searchQuery}</span>"</>
+                  <>No photos found</>
                 )}
               </p>
+              
+              {/* Show interpretation */}
+              {!isSearching && searchInterpretation && (
+                <div className="mt-2 flex flex-wrap gap-2 items-center">
+                  {searchInterpretation.date_start && searchInterpretation.date_end && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs">
+                      📅 {new Date(searchInterpretation.date_start).toLocaleDateString()} - {new Date(searchInterpretation.date_end).toLocaleDateString()}
+                    </span>
+                  )}
+                  {searchInterpretation.keywords.length > 0 && (
+                    searchInterpretation.keywords.map((keyword) => (
+                      <span key={keyword} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">
+                        🏷️ {keyword}
+                      </span>
+                    ))
+                  )}
+                  {searchInterpretation.used_ai && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-300 rounded-full text-xs">
+                      ✨ AI-enhanced
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Search results grid */}
@@ -300,10 +328,10 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🔍</div>
                 <h2 className="text-xl font-semibold text-white mb-2">No matches found</h2>
-                <p className="text-gray-400 mb-2">
-                  Try searching for different terms like:
+                <p className="text-gray-400 mb-4">
+                  Try searching by keywords or time:
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-wrap gap-2 justify-center mb-4">
                   {["beach", "birthday", "sunset", "friends", "food"].map((term) => (
                     <button
                       key={term}
@@ -311,6 +339,18 @@ function HomeFeed({ user, token, onLogout }: { user: User; token: string; onLogo
                       className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-gray-300 rounded-full text-sm transition-colors"
                     >
                       {term}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-gray-500 text-sm mb-2">Or try natural language:</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {["last week", "this month", "summer 2025"].map((term) => (
+                    <button
+                      key={term}
+                      onClick={() => handleSearch(term)}
+                      className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 rounded-full text-sm transition-colors"
+                    >
+                      📅 {term}
                     </button>
                   ))}
                 </div>
