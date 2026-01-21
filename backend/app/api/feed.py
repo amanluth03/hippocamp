@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models import User, Event, EventMember, Photo, Memory
 from app.services.s3 import s3_service
+from app.services.search_intelligence import search_intelligence
 
 router = APIRouter(prefix="/feed", tags=["Feed"])
 
@@ -65,11 +66,21 @@ class SearchResultItem(BaseModel):
         from_attributes = True
 
 
+class SearchInterpretation(BaseModel):
+    """How the search query was interpreted."""
+    original_query: str
+    keywords: List[str]
+    date_start: Optional[datetime] = None
+    date_end: Optional[datetime] = None
+    used_ai: bool = False
+
+
 class SearchResponse(BaseModel):
     """Search results response."""
     query: str
     results: List[SearchResultItem]
     total: int
+    interpretation: Optional[SearchInterpretation] = None
 
 
 @router.get("/search", response_model=SearchResponse)
@@ -81,11 +92,17 @@ async def search_photos(
 ):
     """
     Search across all photos the user has access to (their memories + event photos).
-    Searches against AI-generated labels and descriptions.
-    """
-    from sqlalchemy import or_, func, cast, String
     
-    search_term = q.lower().strip()
+    Supports natural language queries like:
+    - "beach" - simple keyword search
+    - "photos from last week" - date-based search
+    - "summer 2025 vacation" - season + keyword search
+    - "happy moments from december" - complex queries (AI-interpreted)
+    """
+    from sqlalchemy import or_, func, cast, String, and_
+    
+    # Use search intelligence to interpret the query
+    intent = search_intelligence.interpret_query(q)
     
     # Get all event IDs the user is a member of
     member_event_ids = db.query(EventMember.event_id).filter(
@@ -95,22 +112,61 @@ async def search_photos(
     
     results = []
     seen_urls = set()  # Deduplicate by URL
+    events_map = {}
+    
+    # Build keyword search conditions
+    def build_keyword_conditions(model, keywords: list[str]):
+        """Build OR conditions for keyword search across labels and description."""
+        if not keywords:
+            return None
+        
+        conditions = []
+        for keyword in keywords:
+            conditions.append(cast(model.ai_labels, String).ilike(f"%{keyword}%"))
+            conditions.append(model.ai_description.ilike(f"%{keyword}%"))
+        return or_(*conditions)
+    
+    # Build date filter conditions
+    def build_date_conditions(model, date_start, date_end):
+        """Build date range filter."""
+        conditions = []
+        if date_start:
+            conditions.append(model.uploaded_at >= date_start)
+        if date_end:
+            conditions.append(model.uploaded_at <= date_end)
+        return and_(*conditions) if conditions else None
     
     # Search user's memories
-    memories = db.query(Memory).filter(
-        Memory.user_id == current_user.id,
-        Memory.ai_labels.isnot(None),  # Only search AI-processed photos
-        or_(
-            # Search in labels (JSON array) - cast to string and search
-            cast(Memory.ai_labels, String).ilike(f"%{search_term}%"),
-            # Search in description
-            Memory.ai_description.ilike(f"%{search_term}%"),
+    memory_query = db.query(Memory).filter(Memory.user_id == current_user.id)
+    
+    # Apply date filters
+    date_conditions = build_date_conditions(Memory, intent.date_start, intent.date_end)
+    if date_conditions is not None:
+        memory_query = memory_query.filter(date_conditions)
+    
+    # Apply keyword search (only if we have keywords)
+    if intent.keywords:
+        keyword_conditions = build_keyword_conditions(Memory, intent.keywords)
+        if keyword_conditions is not None:
+            memory_query = memory_query.filter(
+                Memory.ai_labels.isnot(None),  # Only search AI-processed photos
+                keyword_conditions
+            )
+    elif not intent.has_date_filter:
+        # No keywords and no date filter - fall back to original query as search term
+        search_term = q.lower().strip()
+        memory_query = memory_query.filter(
+            Memory.ai_labels.isnot(None),
+            or_(
+                cast(Memory.ai_labels, String).ilike(f"%{search_term}%"),
+                Memory.ai_description.ilike(f"%{search_term}%"),
+            )
         )
-    ).order_by(Memory.uploaded_at.desc()).limit(limit).all()
+    
+    memories = memory_query.order_by(Memory.uploaded_at.desc()).limit(limit).all()
     
     # Pre-fetch event names for memories
     memory_event_ids = [m.event_id for m in memories if m.event_id]
-    events_map = {}
     if memory_event_ids:
         for event_id in set(memory_event_ids):
             event = db.query(Event).filter(Event.id == event_id).first()
@@ -137,14 +193,33 @@ async def search_photos(
     
     # Search photos from events user is a member of
     if event_ids:
-        photos = db.query(Photo).filter(
-            Photo.event_id.in_(event_ids),
-            Photo.ai_labels.isnot(None),  # Only search AI-processed photos
-            or_(
-                cast(Photo.ai_labels, String).ilike(f"%{search_term}%"),
-                Photo.ai_description.ilike(f"%{search_term}%"),
+        photo_query = db.query(Photo).filter(Photo.event_id.in_(event_ids))
+        
+        # Apply date filters
+        date_conditions = build_date_conditions(Photo, intent.date_start, intent.date_end)
+        if date_conditions is not None:
+            photo_query = photo_query.filter(date_conditions)
+        
+        # Apply keyword search
+        if intent.keywords:
+            keyword_conditions = build_keyword_conditions(Photo, intent.keywords)
+            if keyword_conditions is not None:
+                photo_query = photo_query.filter(
+                    Photo.ai_labels.isnot(None),
+                    keyword_conditions
+                )
+        elif not intent.has_date_filter:
+            # Fall back to original query
+            search_term = q.lower().strip()
+            photo_query = photo_query.filter(
+                Photo.ai_labels.isnot(None),
+                or_(
+                    cast(Photo.ai_labels, String).ilike(f"%{search_term}%"),
+                    Photo.ai_description.ilike(f"%{search_term}%"),
+                )
             )
-        ).order_by(Photo.uploaded_at.desc()).limit(limit).all()
+        
+        photos = photo_query.order_by(Photo.uploaded_at.desc()).limit(limit).all()
         
         # Pre-fetch events and uploaders
         if photos:
@@ -186,10 +261,20 @@ async def search_photos(
     # Apply limit
     results = results[:limit]
     
+    # Build interpretation response
+    interpretation = SearchInterpretation(
+        original_query=intent.original_query,
+        keywords=intent.keywords,
+        date_start=intent.date_start,
+        date_end=intent.date_end,
+        used_ai=intent.used_ai,
+    )
+    
     return SearchResponse(
         query=q,
         results=results,
         total=len(results),
+        interpretation=interpretation,
     )
 
 

@@ -488,10 +488,19 @@ export interface SearchResultItem {
   ai_description?: string;
 }
 
+export interface SearchInterpretation {
+  original_query: string;
+  keywords: string[];
+  date_start?: string;
+  date_end?: string;
+  used_ai: boolean;
+}
+
 export interface SearchResponse {
   query: string;
   results: SearchResultItem[];
   total: number;
+  interpretation?: SearchInterpretation;
 }
 
 export async function searchPhotos(
