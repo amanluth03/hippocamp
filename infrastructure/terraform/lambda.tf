@@ -62,7 +62,7 @@ resource "aws_iam_role_policy" "lambda_s3" {
   })
 }
 
-# Bedrock access policy for Lambda (AI image analysis)
+# Bedrock access policy for Lambda (AI image analysis + embeddings)
 resource "aws_iam_role_policy" "lambda_bedrock" {
   name = "${var.app_name}-lambda-bedrock-policy"
   role = aws_iam_role.lambda.id
@@ -78,7 +78,9 @@ resource "aws_iam_role_policy" "lambda_bedrock" {
         Resource = [
           # Allow all Anthropic models in all regions (cross-region inference routes dynamically)
           "arn:aws:bedrock:*::foundation-model/anthropic.*",
-          "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/*"
+          "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/*",
+          # Amazon Titan Embeddings for semantic search
+          "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-*"
         ]
       }
     ]

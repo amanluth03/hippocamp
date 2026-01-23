@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models import Photo, Memory
 from app.services.bedrock import bedrock_service
+from app.services.embeddings import embeddings_service
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,18 @@ def analyze_photo_background(photo_id: uuid.UUID, s3_key: str):
             photo.ai_description = result.description
             photo.ai_processed_at = datetime.utcnow()
             photo.ai_error = result.error
+            
+            # Generate embedding for semantic search
+            if result.labels or result.description:
+                embedding_result = embeddings_service.generate_embedding_for_photo(
+                    result.labels, result.description
+                )
+                if embedding_result.embedding:
+                    photo.embedding = embedding_result.embedding
+                    logger.info(f"Generated embedding for photo {photo_id}")
+                elif embedding_result.error:
+                    logger.warning(f"Embedding generation failed for photo {photo_id}: {embedding_result.error}")
+            
             db.commit()
             
             if result.error:
@@ -152,6 +165,18 @@ def analyze_memory_background(memory_id: uuid.UUID, s3_key: str):
             memory.ai_description = result.description
             memory.ai_processed_at = datetime.utcnow()
             memory.ai_error = result.error
+            
+            # Generate embedding for semantic search
+            if result.labels or result.description:
+                embedding_result = embeddings_service.generate_embedding_for_photo(
+                    result.labels, result.description
+                )
+                if embedding_result.embedding:
+                    memory.embedding = embedding_result.embedding
+                    logger.info(f"Generated embedding for memory {memory_id}")
+                elif embedding_result.error:
+                    logger.warning(f"Embedding generation failed for memory {memory_id}: {embedding_result.error}")
+            
             db.commit()
             
             if result.error:
