@@ -193,6 +193,7 @@ async def search_photos(
     results = []
     seen_urls = set()  # Deduplicate by URL
     events_map = {}
+    users_map = {}  # Initialize here so it's available for vector search fallback
     
     # Build keyword search conditions
     def build_keyword_conditions(model, keywords: list[str]):
@@ -309,12 +310,12 @@ async def search_photos(
                     if event:
                         events_map[event_id] = event.name
             
-            users_map = {}
             uploader_ids = list(set(p.uploaded_by for p in photos))
             for uid in uploader_ids:
-                user = db.query(User).filter(User.id == uid).first()
-                if user:
-                    users_map[uid] = user.name or user.email
+                if uid not in users_map:
+                    user = db.query(User).filter(User.id == uid).first()
+                    if user:
+                        users_map[uid] = user.name or user.email
             
             for photo in photos:
                 url = s3_service.get_photo_url(photo.s3_key)
