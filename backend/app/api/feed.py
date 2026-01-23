@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 # If keyword search returns fewer than this many results, also run vector search
 VECTOR_SEARCH_FALLBACK_THRESHOLD = 5
 
+# Maximum cosine distance for vector search results (0=identical, 2=opposite)
+# 0.5 means cosine similarity >= 0.75 (reasonably similar)
+VECTOR_SEARCH_MAX_DISTANCE = 0.5
+
 
 class FeedItem(BaseModel):
     """A single item in the feed (either a photo from an event or a memory)."""
@@ -97,20 +101,24 @@ def vector_search_memories(
     date_start: Optional[datetime] = None,
     date_end: Optional[datetime] = None,
     limit: int = 50,
-    exclude_ids: set = None
+    exclude_ids: set = None,
+    max_distance: float = VECTOR_SEARCH_MAX_DISTANCE
 ) -> list[Memory]:
     """
     Search memories using vector similarity (cosine distance).
+    Only returns results within max_distance threshold.
     """
     from sqlalchemy import and_
     
     exclude_ids = exclude_ids or set()
     
     # Build base query with vector ordering
-    # pgvector uses <=> for cosine distance (lower is better)
+    # pgvector uses <=> for cosine distance (lower is better, 0=identical, 2=opposite)
     query = db.query(Memory).filter(
         Memory.user_id == user_id,
         Memory.embedding.isnot(None),  # Only search photos with embeddings
+        # Filter by similarity threshold
+        Memory.embedding.cosine_distance(query_embedding) < max_distance,
     )
     
     if exclude_ids:
@@ -122,7 +130,7 @@ def vector_search_memories(
     if date_end:
         query = query.filter(Memory.uploaded_at <= date_end)
     
-    # Order by cosine similarity (using <=> operator for cosine distance)
+    # Order by cosine similarity (closest first)
     query = query.order_by(Memory.embedding.cosine_distance(query_embedding))
     
     return query.limit(limit).all()
@@ -135,10 +143,12 @@ def vector_search_photos(
     date_start: Optional[datetime] = None,
     date_end: Optional[datetime] = None,
     limit: int = 50,
-    exclude_ids: set = None
+    exclude_ids: set = None,
+    max_distance: float = VECTOR_SEARCH_MAX_DISTANCE
 ) -> list[Photo]:
     """
     Search photos using vector similarity (cosine distance).
+    Only returns results within max_distance threshold.
     """
     if not event_ids:
         return []
@@ -148,6 +158,8 @@ def vector_search_photos(
     query = db.query(Photo).filter(
         Photo.event_id.in_(event_ids),
         Photo.embedding.isnot(None),
+        # Filter by similarity threshold
+        Photo.embedding.cosine_distance(query_embedding) < max_distance,
     )
     
     if exclude_ids:
@@ -158,6 +170,7 @@ def vector_search_photos(
     if date_end:
         query = query.filter(Photo.uploaded_at <= date_end)
     
+    # Order by cosine similarity (closest first)
     query = query.order_by(Photo.embedding.cosine_distance(query_embedding))
     
     return query.limit(limit).all()
