@@ -93,11 +93,16 @@ jobs:
           cache: "pip"
           cache-dependency-path: backend/requirements.txt
 
-      - name: Install dependencies
+      - name: Build dependencies with Docker (Lambda-compatible)
         working-directory: backend
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -t package/
+          # Create package directory
+          mkdir -p package
+          
+          # Use Docker to build dependencies for Lambda's Linux environment
+          # This ensures numpy and other compiled packages are compatible
+          docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.11:latest \
+            pip install -r /var/task/requirements.txt -t /var/task/package/ --no-cache-dir
 
       - name: Copy application code
         working-directory: backend
