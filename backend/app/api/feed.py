@@ -1,4 +1,5 @@
 import uuid
+import logging
 from typing import List, Optional
 from datetime import datetime
 
@@ -11,8 +12,13 @@ from app.core.security import get_current_user
 from app.models import User, Event, EventMember, Photo, Memory
 from app.services.s3 import s3_service
 from app.services.search_intelligence import search_intelligence
+from app.services.embeddings import embeddings_service
 
 router = APIRouter(prefix="/feed", tags=["Feed"])
+logger = logging.getLogger(__name__)
+
+# If keyword search returns fewer than this many results, also run vector search
+VECTOR_SEARCH_FALLBACK_THRESHOLD = 5
 
 
 class FeedItem(BaseModel):
@@ -81,6 +87,80 @@ class SearchResponse(BaseModel):
     results: List[SearchResultItem]
     total: int
     interpretation: Optional[SearchInterpretation] = None
+    used_vector_search: bool = False
+
+
+def vector_search_memories(
+    db: Session, 
+    user_id: uuid.UUID, 
+    query_embedding: list[float],
+    date_start: Optional[datetime] = None,
+    date_end: Optional[datetime] = None,
+    limit: int = 50,
+    exclude_ids: set = None
+) -> list[Memory]:
+    """
+    Search memories using vector similarity (cosine distance).
+    """
+    from sqlalchemy import and_
+    
+    exclude_ids = exclude_ids or set()
+    
+    # Build base query with vector ordering
+    # pgvector uses <=> for cosine distance (lower is better)
+    query = db.query(Memory).filter(
+        Memory.user_id == user_id,
+        Memory.embedding.isnot(None),  # Only search photos with embeddings
+    )
+    
+    if exclude_ids:
+        query = query.filter(~Memory.id.in_(exclude_ids))
+    
+    # Apply date filters
+    if date_start:
+        query = query.filter(Memory.uploaded_at >= date_start)
+    if date_end:
+        query = query.filter(Memory.uploaded_at <= date_end)
+    
+    # Order by cosine similarity (using <=> operator for cosine distance)
+    query = query.order_by(Memory.embedding.cosine_distance(query_embedding))
+    
+    return query.limit(limit).all()
+
+
+def vector_search_photos(
+    db: Session, 
+    event_ids: list[uuid.UUID], 
+    query_embedding: list[float],
+    date_start: Optional[datetime] = None,
+    date_end: Optional[datetime] = None,
+    limit: int = 50,
+    exclude_ids: set = None
+) -> list[Photo]:
+    """
+    Search photos using vector similarity (cosine distance).
+    """
+    if not event_ids:
+        return []
+    
+    exclude_ids = exclude_ids or set()
+    
+    query = db.query(Photo).filter(
+        Photo.event_id.in_(event_ids),
+        Photo.embedding.isnot(None),
+    )
+    
+    if exclude_ids:
+        query = query.filter(~Photo.id.in_(exclude_ids))
+    
+    if date_start:
+        query = query.filter(Photo.uploaded_at >= date_start)
+    if date_end:
+        query = query.filter(Photo.uploaded_at <= date_end)
+    
+    query = query.order_by(Photo.embedding.cosine_distance(query_embedding))
+    
+    return query.limit(limit).all()
 
 
 @router.get("/search", response_model=SearchResponse)
@@ -261,6 +341,95 @@ async def search_photos(
     # Apply limit
     results = results[:limit]
     
+    # Track if we used vector search
+    used_vector_search = False
+    
+    # If keyword search returned few results, try vector/semantic search
+    if len(results) < VECTOR_SEARCH_FALLBACK_THRESHOLD and embeddings_service.enabled:
+        logger.info(f"Keyword search returned {len(results)} results, trying vector search")
+        
+        # Generate embedding for the search query
+        embedding_result = embeddings_service.generate_query_embedding(q)
+        
+        if embedding_result.embedding:
+            used_vector_search = True
+            
+            # Get IDs of results we already have to exclude them
+            existing_memory_ids = {
+                uuid.UUID(r.id.replace("memory_", "")) 
+                for r in results if r.id.startswith("memory_")
+            }
+            existing_photo_ids = {
+                uuid.UUID(r.id.replace("photo_", "")) 
+                for r in results if r.id.startswith("photo_")
+            }
+            
+            # Vector search memories
+            vector_memories = vector_search_memories(
+                db=db,
+                user_id=current_user.id,
+                query_embedding=embedding_result.embedding,
+                date_start=intent.date_start,
+                date_end=intent.date_end,
+                limit=limit - len(results),
+                exclude_ids=existing_memory_ids
+            )
+            
+            for memory in vector_memories:
+                url = s3_service.get_photo_url(memory.s3_key)
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    results.append(SearchResultItem(
+                        id=f"memory_{memory.id}",
+                        type="memory",
+                        url=url,
+                        thumbnail_url=s3_service.get_thumb_url(memory.s3_key),
+                        uploaded_at=memory.uploaded_at,
+                        event_id=str(memory.event_id) if memory.event_id else None,
+                        event_name=events_map.get(memory.event_id),
+                        uploader_name="You",
+                        is_personal=True,
+                        ai_labels=memory.ai_labels,
+                        ai_description=memory.ai_description,
+                    ))
+            
+            # Vector search photos
+            if event_ids and len(results) < limit:
+                vector_photos = vector_search_photos(
+                    db=db,
+                    event_ids=event_ids,
+                    query_embedding=embedding_result.embedding,
+                    date_start=intent.date_start,
+                    date_end=intent.date_end,
+                    limit=limit - len(results),
+                    exclude_ids=existing_photo_ids
+                )
+                
+                for photo in vector_photos:
+                    url = s3_service.get_photo_url(photo.s3_key)
+                    if url not in seen_urls:
+                        seen_urls.add(url)
+                        is_personal = photo.uploaded_by == current_user.id
+                        results.append(SearchResultItem(
+                            id=f"photo_{photo.id}",
+                            type="event_photo",
+                            url=url,
+                            thumbnail_url=s3_service.get_thumb_url(photo.s3_key),
+                            uploaded_at=photo.uploaded_at,
+                            event_id=str(photo.event_id),
+                            event_name=events_map.get(photo.event_id, "Unknown Event"),
+                            uploader_name="You" if is_personal else users_map.get(photo.uploaded_by, "Unknown"),
+                            is_personal=is_personal,
+                            ai_labels=photo.ai_labels,
+                            ai_description=photo.ai_description,
+                        ))
+            
+            logger.info(f"Vector search added {len(results) - len(existing_memory_ids) - len(existing_photo_ids)} results")
+    
+    # Final sort and limit
+    results.sort(key=lambda x: x.uploaded_at, reverse=True)
+    results = results[:limit]
+    
     # Build interpretation response
     interpretation = SearchInterpretation(
         original_query=intent.original_query,
@@ -275,6 +444,7 @@ async def search_photos(
         results=results,
         total=len(results),
         interpretation=interpretation,
+        used_vector_search=used_vector_search,
     )
 
 
