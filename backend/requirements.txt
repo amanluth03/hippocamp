@@ -7,6 +7,7 @@ python-multipart==0.0.6
 sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
 alembic==1.13.1
+numpy==1.26.4  # Pin before pgvector - newer versions require GCC 9.3+ (Lambda has 7.3)
 pgvector==0.3.6
 
 # Authentication
