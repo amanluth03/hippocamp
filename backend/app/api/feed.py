@@ -18,11 +18,12 @@ router = APIRouter(prefix="/feed", tags=["Feed"])
 logger = logging.getLogger(__name__)
 
 # If keyword search returns fewer than this many results, also run vector search
-VECTOR_SEARCH_FALLBACK_THRESHOLD = 5
+# Higher threshold = vector search runs more often = better semantic matching
+VECTOR_SEARCH_FALLBACK_THRESHOLD = 10
 
 # Maximum cosine distance for vector search results (0=identical, 2=opposite)
-# 0.5 means cosine similarity >= 0.75 (reasonably similar)
-VECTOR_SEARCH_MAX_DISTANCE = 0.5
+# 0.8 allows broader semantic matches (food -> crepe, boy -> child, etc.)
+VECTOR_SEARCH_MAX_DISTANCE = 0.8
 
 
 class FeedItem(BaseModel):
