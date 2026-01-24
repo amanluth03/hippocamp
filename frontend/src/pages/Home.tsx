@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, getGoogleLoginUrl, getFeed, FeedItem, searchPhotos, SearchResultItem, SearchInterpretation } from "../services/api";
+import { User, getFeed, FeedItem, searchPhotos, SearchResultItem, SearchInterpretation } from "../services/api";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { Spinner } from "../components/Spinner";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
@@ -10,6 +10,7 @@ interface HomeProps {
   user: User | null;
   loading: boolean;
   onLogout: () => void;
+  onLogin: () => void;  // Function to trigger login flow
   token?: string | null;
 }
 
@@ -20,16 +21,16 @@ const isNetworkAccess = !isProduction &&
   window.location.hostname !== "localhost" && 
   window.location.hostname !== "127.0.0.1";
 
-export function Home({ user, loading, onLogout, token }: HomeProps) {
+export function Home({ user, loading, onLogout, onLogin, token }: HomeProps) {
   const navigate = useNavigate();
 
   const handleSignIn = () => {
-    // In production, always use Google OAuth
+    // In production, always use Google OAuth (via onLogin which handles Capacitor)
     // In development on network (mobile testing), use dev login
     if (isNetworkAccess) {
       navigate("/dev/login");
     } else {
-      window.location.href = getGoogleLoginUrl();
+      onLogin();
     }
   };
 

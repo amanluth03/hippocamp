@@ -1,14 +1,24 @@
 import { compressImageForUpload } from "../utils/imageCompression";
+import { Capacitor } from "@capacitor/core";
 
 // API URL configuration
 // - Production: Uses /api path (same domain via CloudFront routing)
 // - Development: Uses localhost:8000 or network IP:8000
+// - Capacitor (iOS): Uses full URL since we're not on the same domain
 const isProduction = import.meta.env.PROD;
-const API_URL = isProduction
-  ? "/api"
-  : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-    ? "http://localhost:8000"
-    : `http://${window.location.hostname}:8000`;
+const isCapacitor = Capacitor.isNativePlatform();
+
+// Full API URL for external/Capacitor use
+export const API_BASE_URL = "https://thehippocampus.net/api";
+
+// API URL for fetch requests (relative in browser, absolute in Capacitor)
+const API_URL = isCapacitor
+  ? API_BASE_URL
+  : isProduction
+    ? "/api"
+    : window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "http://localhost:8000"
+      : `http://${window.location.hostname}:8000`;
 
 export interface User {
   id: string;
@@ -33,7 +43,17 @@ export async function getCurrentUser(token: string): Promise<User> {
 }
 
 export function getGoogleLoginUrl(): string {
+  // In Capacitor, we need the full URL for external browser
+  // Also add a redirect hint for the native app
+  if (isCapacitor) {
+    return `${API_BASE_URL}/auth/google/login?redirect_scheme=hippocampus`;
+  }
   return `${API_URL}/auth/google/login`;
+}
+
+// Helper to check if running in native app
+export function isNativeApp(): boolean {
+  return isCapacitor;
 }
 
 // Events API

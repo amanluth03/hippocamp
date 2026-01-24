@@ -1,7 +1,10 @@
 from urllib.parse import urlencode
+from typing import Optional
+import base64
+import json
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -19,13 +22,24 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
 @router.get("/google/login")
-async def google_login():
-    """Redirect to Google OAuth login page."""
+async def google_login(redirect_scheme: Optional[str] = Query(None)):
+    """
+    Redirect to Google OAuth login page.
+    
+    Args:
+        redirect_scheme: Optional custom URL scheme for native app callback (e.g., 'hippocampus')
+    """
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Google OAuth not configured. Set GOOGLE_CLIENT_ID in environment.",
         )
+    
+    # Encode state to pass redirect_scheme through OAuth flow
+    state_data = {}
+    if redirect_scheme:
+        state_data["redirect_scheme"] = redirect_scheme
+    state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode() if state_data else None
     
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -35,13 +49,29 @@ async def google_login():
         "access_type": "offline",
         "prompt": "consent",
     }
+    if state:
+        params["state"] = state
+        
     auth_url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
     return RedirectResponse(url=auth_url)
 
 
 @router.get("/google/callback")
-async def google_callback(code: str, db: Session = Depends(get_db)):
+async def google_callback(
+    code: str, 
+    state: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     """Handle Google OAuth callback and create/login user."""
+    
+    # Decode state to get redirect_scheme if present
+    redirect_scheme = None
+    if state:
+        try:
+            state_data = json.loads(base64.urlsafe_b64decode(state).decode())
+            redirect_scheme = state_data.get("redirect_scheme")
+        except Exception:
+            pass  # Invalid state, ignore
     
     # Exchange code for tokens
     async with httpx.AsyncClient() as client:
@@ -97,7 +127,14 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     # Create JWT token
     jwt_token = create_access_token(user.id)
     
-    # Redirect to frontend with token
+    # Redirect to native app if redirect_scheme is provided
+    if redirect_scheme:
+        # Redirect to custom URL scheme for native app
+        # Format: hippocampus://auth/callback?token=xxx
+        native_url = f"{redirect_scheme}://auth/callback?token={jwt_token}"
+        return RedirectResponse(url=native_url)
+    
+    # Otherwise redirect to frontend web app
     frontend_url = f"{settings.FRONTEND_URL}/auth/callback?token={jwt_token}"
     return RedirectResponse(url=frontend_url)
 
