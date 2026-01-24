@@ -1,5 +1,8 @@
-import { useState, useEffect } from "react";
-import { User, getCurrentUser } from "../services/api";
+import { useState, useEffect, useCallback } from "react";
+import { User, getCurrentUser, getGoogleLoginUrl, isNativeApp } from "../services/api";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+import { App, URLOpenListenerEvent } from "@capacitor/app";
 
 const TOKEN_KEY = "hippocamp_token";
 
@@ -9,6 +12,34 @@ export function useAuth() {
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem(TOKEN_KEY);
   });
+
+  // Handle deep link callback from OAuth (for Capacitor)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const handleAppUrlOpen = async (event: URLOpenListenerEvent) => {
+      console.log("useAuth: App URL opened:", event.url);
+      
+      // Parse the URL to extract the token
+      // Expected format: hippocampus://auth/callback?token=xxx
+      const url = new URL(event.url);
+      const urlToken = url.searchParams.get("token");
+      
+      if (urlToken) {
+        console.log("useAuth: Token received from deep link");
+        login(urlToken);
+        // Close the browser after successful login
+        await Browser.close();
+      }
+    };
+
+    // Listen for app URL open events
+    App.addListener("appUrlOpen", handleAppUrlOpen);
+
+    return () => {
+      App.removeAllListeners();
+    };
+  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -37,7 +68,7 @@ export function useAuth() {
     loadUser();
   }, [token]);
 
-  const login = (newToken: string) => {
+  const login = useCallback((newToken: string) => {
     console.log("useAuth.login: saving token to localStorage");
     try {
       localStorage.setItem(TOKEN_KEY, newToken);
@@ -47,14 +78,37 @@ export function useAuth() {
     }
     setToken(newToken);
     console.log("useAuth.login: state updated");
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
-  return { user, loading, token, login, logout, isAuthenticated: !!user };
+  // Start OAuth flow - uses Browser plugin for Capacitor
+  const startGoogleLogin = useCallback(async () => {
+    const loginUrl = getGoogleLoginUrl();
+    console.log("useAuth.startGoogleLogin: URL =", loginUrl);
+    
+    if (isNativeApp()) {
+      // Open in external browser for Capacitor
+      console.log("useAuth.startGoogleLogin: Opening in Capacitor Browser");
+      await Browser.open({ url: loginUrl });
+    } else {
+      // Regular browser navigation
+      window.location.href = loginUrl;
+    }
+  }, []);
+
+  return { 
+    user, 
+    loading, 
+    token, 
+    login, 
+    logout, 
+    startGoogleLogin,
+    isAuthenticated: !!user 
+  };
 }
 
