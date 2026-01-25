@@ -11,6 +11,13 @@ const config: CapacitorConfig = {
     allowNavigation: ['thehippocampus.net', '*.thehippocampus.net'],
   },
   
+  // Enable native HTTP - bypasses CORS/WebView restrictions for fetch()
+  plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
+  
   ios: {
     // Use WKWebView (modern, recommended)
     contentInset: 'automatic',

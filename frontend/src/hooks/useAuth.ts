@@ -57,7 +57,11 @@ export function useAuth() {
         setUser(userData);
       } catch (error) {
         // Token is invalid, clear it
-        console.error("useAuth.loadUser: ERROR - clearing token:", error);
+        const err = error as Error;
+        console.error("useAuth.loadUser: ERROR - clearing token");
+        console.error("useAuth.loadUser: error name:", err.name);
+        console.error("useAuth.loadUser: error message:", err.message);
+        console.error("useAuth.loadUser: error stack:", err.stack);
         localStorage.removeItem(TOKEN_KEY);
         setToken(null);
       } finally {

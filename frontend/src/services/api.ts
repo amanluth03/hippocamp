@@ -29,17 +29,31 @@ export interface User {
 }
 
 export async function getCurrentUser(token: string): Promise<User> {
-  const response = await fetch(`${API_URL}/auth/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const url = `${API_URL}/auth/me`;
+  console.log("getCurrentUser: fetching from", url);
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to get user");
+    console.log("getCurrentUser: response status", response.status);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("getCurrentUser: error response body:", text);
+      throw new Error(`Failed to get user: ${response.status} ${text}`);
+    }
+
+    const data = await response.json();
+    console.log("getCurrentUser: success, user email:", data.email);
+    return data;
+  } catch (error) {
+    console.error("getCurrentUser: fetch error:", error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export function getGoogleLoginUrl(): string {
