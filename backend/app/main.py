@@ -27,15 +27,19 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
-# Production: Only allow the specific frontend domain
+# Production: Only allow the specific frontend domain + Capacitor iOS app
 # Development: Allow all origins for mobile/network testing
 if settings.DEBUG:
     # Development mode - allow all origins for easier testing
     cors_origins = ["*"]
     cors_origin_regex = r"http://\d+\.\d+\.\d+\.\d+:\d+"  # Allow any IP:port
 else:
-    # Production mode - only allow specific domain
-    cors_origins = [settings.FRONTEND_URL]
+    # Production mode - allow specific domain and Capacitor iOS app
+    cors_origins = [
+        settings.FRONTEND_URL,  # Web app
+        "capacitor://localhost",  # iOS app (Capacitor)
+        "ionic://localhost",  # Alternative Capacitor origin
+    ]
     cors_origin_regex = None
 
 app.add_middleware(
