@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Photo } from "../services/api";
+import { Share } from "@capacitor/share";
+import { Capacitor } from "@capacitor/core";
 
 interface PhotoModalProps {
   photo: Photo;
@@ -12,6 +14,7 @@ interface PhotoModalProps {
 export function PhotoModal({ photo, photos, onClose, onNavigate, onDelete }: PhotoModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [sharing, setSharing] = useState(false);
   
   const currentIndex = photos.findIndex((p) => p.id === photo.id);
   const hasPrevious = currentIndex > 0;
@@ -46,6 +49,49 @@ export function PhotoModal({ photo, photos, onClose, onNavigate, onDelete }: Pho
       console.error("Failed to delete photo:", err);
       setDeleting(false);
       setConfirmDelete(false);
+    }
+  }
+
+  async function handleShare() {
+    setSharing(true);
+    try {
+      // Use the best available URL (medium for quality, fallback to original)
+      const shareUrl = photo.medium_url || photo.url;
+      
+      // Check if we can share
+      const canShare = await Share.canShare();
+      
+      if (canShare.value) {
+        await Share.share({
+          title: "Photo from Hippo Campus",
+          text: `Check out this photo${photo.uploader_name ? ` by ${photo.uploader_name}` : ""}`,
+          url: shareUrl,
+          dialogTitle: "Share Photo",
+        });
+      } else if (Capacitor.isNativePlatform()) {
+        // Native but can't share - shouldn't happen
+        console.error("Share not available on this device");
+      } else {
+        // Web fallback - try Web Share API
+        if (navigator.share) {
+          await navigator.share({
+            title: "Photo from Hippo Campus",
+            text: `Check out this photo${photo.uploader_name ? ` by ${photo.uploader_name}` : ""}`,
+            url: shareUrl,
+          });
+        } else {
+          // Last resort: copy URL to clipboard
+          await navigator.clipboard.writeText(shareUrl);
+          alert("Link copied to clipboard!");
+        }
+      }
+    } catch (err) {
+      // User cancelled share or error occurred
+      if ((err as Error).message !== "Share canceled") {
+        console.error("Failed to share:", err);
+      }
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -141,6 +187,19 @@ export function PhotoModal({ photo, photos, onClose, onNavigate, onDelete }: Pho
               </div>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Share button */}
+              <button
+                onClick={handleShare}
+                disabled={sharing}
+                className="p-2 text-gray-400 hover:text-blue-400 transition-colors disabled:opacity-50"
+                aria-label="Share photo"
+                title="Share photo"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                </svg>
+              </button>
+              {/* Delete button */}
               {onDelete && (
                 confirmDelete ? (
                   <div className="flex items-center gap-2">
