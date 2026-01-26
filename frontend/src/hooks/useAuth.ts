@@ -3,6 +3,7 @@ import { User, getCurrentUser, getGoogleLoginUrl, isNativeApp } from "../service
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { App, URLOpenListenerEvent } from "@capacitor/app";
+import { SharedAuthBridge } from "../utils/SharedAuthBridge";
 
 const TOKEN_KEY = "hippocamp_token";
 
@@ -55,6 +56,9 @@ export function useAuth() {
         const userData = await getCurrentUser(token);
         console.log("useAuth.loadUser: got user data:", userData?.email);
         setUser(userData);
+        
+        // Sync token to App Groups for Share Extension (in case it's missing)
+        await SharedAuthBridge.saveToken(token);
       } catch (error) {
         // Token is invalid, clear it
         const err = error as Error;
@@ -63,6 +67,7 @@ export function useAuth() {
         console.error("useAuth.loadUser: error message:", err.message);
         console.error("useAuth.loadUser: error stack:", err.stack);
         localStorage.removeItem(TOKEN_KEY);
+        await SharedAuthBridge.clearToken();
         setToken(null);
       } finally {
         setLoading(false);
@@ -72,11 +77,14 @@ export function useAuth() {
     loadUser();
   }, [token]);
 
-  const login = useCallback((newToken: string) => {
+  const login = useCallback(async (newToken: string) => {
     console.log("useAuth.login: saving token to localStorage");
     try {
       localStorage.setItem(TOKEN_KEY, newToken);
       console.log("useAuth.login: localStorage.setItem succeeded");
+      
+      // Also save to App Groups for Share Extension
+      await SharedAuthBridge.saveToken(newToken);
     } catch (e) {
       console.error("useAuth.login: localStorage.setItem FAILED", e);
     }
@@ -84,8 +92,10 @@ export function useAuth() {
     console.log("useAuth.login: state updated");
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     localStorage.removeItem(TOKEN_KEY);
+    // Also clear from App Groups
+    await SharedAuthBridge.clearToken();
     setToken(null);
     setUser(null);
   }, []);
