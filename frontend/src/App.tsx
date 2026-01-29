@@ -8,6 +8,8 @@ import { Flashbacks } from "./pages/Flashbacks";
 import { Memories } from "./pages/Memories";
 import { DevLogin } from "./pages/DevLogin";
 import { ShareTarget } from "./pages/ShareTarget";
+import Privacy from "./pages/Privacy";
+import Support from "./pages/Support";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BottomNav } from "./components/BottomNav";
 
@@ -51,6 +53,14 @@ function App() {
             <Route
               path="/share-target"
               element={<ShareTarget token={token} />}
+            />
+            <Route
+              path="/privacy"
+              element={<Privacy />}
+            />
+            <Route
+              path="/support"
+              element={<Support />}
             />
           </Routes>
         </div>
