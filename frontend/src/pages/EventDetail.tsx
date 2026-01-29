@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers, updateEvent, EventUpdate, deleteEvent } from "../services/api";
+import { Event, getEvent, Photo, getEventPhotos, uploadPhoto, deletePhoto, EventMember, getEventMembers, updateEvent, EventUpdate, deleteEvent, leaveEvent } from "../services/api";
 import { PhotoModal } from "../components/PhotoModal";
 import { Spinner, LoadingScreen } from "../components/Spinner";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
@@ -29,6 +29,8 @@ export function EventDetail({ token }: EventDetailProps) {
   const [saving, setSaving] = useState(false);
   const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
+  const [confirmLeaveEvent, setConfirmLeaveEvent] = useState(false);
+  const [leavingEvent, setLeavingEvent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -328,6 +330,22 @@ export function EventDetail({ token }: EventDetailProps) {
       setEditError("Failed to delete event. You may not have permission.");
       setDeletingEvent(false);
       setConfirmDeleteEvent(false);
+    }
+  }
+
+  async function handleLeaveEvent() {
+    if (!token || !eventId) return;
+
+    setLeavingEvent(true);
+    setEditError(null);
+
+    try {
+      await leaveEvent(token, eventId);
+      navigate("/events");
+    } catch (err: any) {
+      setEditError(err.message || "Failed to leave event.");
+      setLeavingEvent(false);
+      setConfirmLeaveEvent(false);
     }
   }
 
@@ -671,6 +689,36 @@ export function EventDetail({ token }: EventDetailProps) {
                   onChange={(e) => setEditForm({ ...editForm, event_date: e.target.value })}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
                 />
+              </div>
+
+              {/* Leave Event */}
+              <div className="pt-4 mt-4 border-t border-white/10">
+                {confirmLeaveEvent ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-orange-300 text-sm">Leave this event?</span>
+                    <button
+                      onClick={handleLeaveEvent}
+                      disabled={leavingEvent}
+                      className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {leavingEvent ? "Leaving..." : "Yes, Leave"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmLeaveEvent(false)}
+                      disabled={leavingEvent}
+                      className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmLeaveEvent(true)}
+                    className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg text-sm transition-colors"
+                  >
+                    Leave Event
+                  </button>
+                )}
               </div>
 
               {/* Delete Event */}

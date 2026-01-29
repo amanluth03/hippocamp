@@ -279,6 +279,53 @@ async def join_event(
     )
 
 
+@router.post("/{event_id}/leave", status_code=status.HTTP_200_OK)
+async def leave_event(
+    event_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Leave an event. Admins cannot leave if they are the only admin."""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+    
+    # Check if user is a member
+    membership = db.query(EventMember).filter(
+        EventMember.event_id == event_id,
+        EventMember.user_id == current_user.id,
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this event",
+        )
+    
+    # If user is an admin, check if there are other admins
+    if membership.role == "admin":
+        admin_count = db.query(EventMember).filter(
+            EventMember.event_id == event_id,
+            EventMember.role == "admin",
+        ).count()
+        
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You are the only admin. Transfer admin role to another member or delete the event.",
+            )
+    
+    # Remove the membership
+    db.delete(membership)
+    db.commit()
+    
+    return {"message": "Successfully left the event"}
+
+
 @router.get("/{event_id}/members", response_model=List[EventMemberResponse])
 async def get_event_members(
     event_id: uuid.UUID,

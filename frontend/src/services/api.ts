@@ -196,6 +196,25 @@ export async function deleteEvent(
   }
 }
 
+export async function leaveEvent(
+  token: string,
+  eventId: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/events/${eventId}/leave`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Failed to leave event");
+  }
+
+  return response.json();
+}
+
 // Event Members API
 
 export interface EventMember {
