@@ -23,8 +23,7 @@ class ShareViewController: UIViewController {
     private let statusLabel = UILabel()
     
     // MARK: - Properties
-    private var imageData: Data?
-    private var fileName: String = "photo.jpg"
+    private var images: [(data: Data, fileName: String)] = []
     private var events: [(id: String, name: String)] = []
     private var selectedEventIndex: Int = 0
     private var isShowingEventList = false
@@ -34,7 +33,7 @@ class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        extractSharedImage()
+        extractSharedImages()
     }
     
     // MARK: - UI Setup
@@ -64,10 +63,11 @@ class ShareViewController: UIViewController {
         
         // Subtitle
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Where do you want to save this photo?"
+        subtitleLabel.text = "Where do you want to save?"
         subtitleLabel.font = .systemFont(ofSize: 17)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.textAlignment = .center
+        subtitleLabel.tag = 999
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(subtitleLabel)
         
@@ -185,73 +185,120 @@ class ShareViewController: UIViewController {
     }
     
     // MARK: - Extract Shared Content
-    private func extractSharedImage() {
-        guard let extensionItem = extensionContext?.inputItems.first as? NSExtensionItem,
-              let itemProvider = extensionItem.attachments?.first else {
-            showError("No image found")
+    private func extractSharedImages() {
+        guard let extensionItems = extensionContext?.inputItems as? [NSExtensionItem] else {
+            showError("No images found")
             return
         }
         
-        // Try to load image
-        if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-            itemProvider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { [weak self] (item, error) in
+        // Collect all image providers from all extension items
+        var imageProviders: [NSItemProvider] = []
+        for item in extensionItems {
+            if let attachments = item.attachments {
+                for provider in attachments {
+                    if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                        imageProviders.append(provider)
+                    }
+                }
+            }
+        }
+        
+        if imageProviders.isEmpty {
+            showError("No images found")
+            return
+        }
+        
+        let totalCount = imageProviders.count
+        var loadedCount = 0
+        
+        for (index, provider) in imageProviders.enumerated() {
+            provider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { [weak self] (item, error) in
                 if let error = error {
-                    self?.showError("Error loading image: \(error.localizedDescription)")
+                    print("Error loading image \(index): \(error.localizedDescription)")
+                    loadedCount += 1
                     return
                 }
                 
                 var imageToProcess: UIImage?
+                var fileName = "photo_\(index).jpg"
                 
                 if let url = item as? URL {
                     imageToProcess = UIImage(contentsOfFile: url.path)
-                    self?.fileName = url.lastPathComponent
+                    fileName = url.lastPathComponent
                 } else if let image = item as? UIImage {
                     imageToProcess = image
                 } else if let data = item as? Data {
                     imageToProcess = UIImage(data: data)
                 }
                 
-                if let image = imageToProcess {
-                    self?.processImage(image)
-                } else {
-                    self?.showError("Could not process image")
+                if let image = imageToProcess,
+                   let data = image.jpegData(compressionQuality: 0.8) {
+                    DispatchQueue.main.async {
+                        self?.images.append((data: data, fileName: fileName))
+                    }
+                }
+                
+                loadedCount += 1
+                
+                // All images loaded
+                if loadedCount == totalCount {
+                    DispatchQueue.main.async {
+                        self?.onImagesLoaded()
+                    }
                 }
             }
-        } else {
-            showError("Item is not an image")
         }
     }
     
-    private func processImage(_ image: UIImage) {
-        // Convert to JPEG data
-        guard let data = image.jpegData(compressionQuality: 0.8) else {
-            showError("Could not convert image")
+    private func onImagesLoaded() {
+        if images.isEmpty {
+            showError("Could not process images")
             return
         }
         
-        self.imageData = data
+        // Update subtitle with count
+        let count = images.count
+        if let subtitleLabel = containerView.viewWithTag(999) as? UILabel {
+            subtitleLabel.text = count == 1 ? "Where do you want to save this photo?" : "Where do you want to save \(count) photos?"
+        }
         
-        // Fetch events for the picker
+        // Fetch events
         fetchEvents()
     }
     
     // MARK: - Actions
     @objc private func saveAsMemoryTapped() {
-        guard let imageData = imageData else {
+        if images.isEmpty {
             showError("No image data available")
             return
         }
         
-        setLoading(true, message: "Creating memory...")
+        let total = images.count
+        setLoading(true, message: "Saving \(total == 1 ? "memory" : "\(total) memories")...")
         
-        HippoCampusAPI.shared.uploadMemory(imageData: imageData, fileName: fileName) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.setLoading(false)
-                switch result {
-                case .success:
-                    self?.completeRequest()
-                case .failure(let error):
-                    self?.showError("Failed to upload: \(error.localizedDescription)")
+        var completedCount = 0
+        var failedCount = 0
+        
+        for image in images {
+            HippoCampusAPI.shared.uploadMemory(imageData: image.data, fileName: image.fileName) { [weak self] result in
+                DispatchQueue.main.async {
+                    completedCount += 1
+                    if case .failure = result {
+                        failedCount += 1
+                    }
+                    
+                    // Update progress
+                    self?.statusLabel.text = "Uploading \(completedCount)/\(total)..."
+                    
+                    // All done
+                    if completedCount == total {
+                        self?.setLoading(false)
+                        if failedCount == 0 {
+                            self?.completeRequest()
+                        } else {
+                            self?.showError("\(failedCount) of \(total) uploads failed")
+                        }
+                    }
                 }
             }
         }
@@ -342,7 +389,7 @@ class ShareViewController: UIViewController {
         let index = sender.tag
         selectedEventIndex = index
         
-        guard let imageData = imageData else {
+        if images.isEmpty {
             showError("No image data available")
             return
         }
@@ -352,16 +399,32 @@ class ShareViewController: UIViewController {
         
         let eventId = events[index].id
         let eventName = events[index].name
-        setLoading(true, message: "Adding to \(eventName)...")
+        let total = images.count
+        setLoading(true, message: "Adding \(total == 1 ? "photo" : "\(total) photos") to \(eventName)...")
         
-        HippoCampusAPI.shared.uploadPhotoToEvent(eventId: eventId, imageData: imageData, fileName: fileName) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.setLoading(false)
-                switch result {
-                case .success:
-                    self?.completeRequest()
-                case .failure(let error):
-                    self?.showError("Failed: \(error.localizedDescription)")
+        var completedCount = 0
+        var failedCount = 0
+        
+        for image in images {
+            HippoCampusAPI.shared.uploadPhotoToEvent(eventId: eventId, imageData: image.data, fileName: image.fileName) { [weak self] result in
+                DispatchQueue.main.async {
+                    completedCount += 1
+                    if case .failure = result {
+                        failedCount += 1
+                    }
+                    
+                    // Update progress
+                    self?.statusLabel.text = "Uploading \(completedCount)/\(total)..."
+                    
+                    // All done
+                    if completedCount == total {
+                        self?.setLoading(false)
+                        if failedCount == 0 {
+                            self?.completeRequest()
+                        } else {
+                            self?.showError("\(failedCount) of \(total) uploads failed")
+                        }
+                    }
                 }
             }
         }
