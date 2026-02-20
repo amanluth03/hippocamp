@@ -34,6 +34,11 @@ class Settings:
     )
     
     # ==========================================================================
+    # Apple Sign In
+    # ==========================================================================
+    APPLE_CLIENT_ID: str = os.getenv("APPLE_CLIENT_ID", "net.thehippocampus.app")
+    
+    # ==========================================================================
     # JWT Authentication
     # ==========================================================================
     # IMPORTANT: Change SECRET_KEY in production! Use a secure random string.

@@ -70,6 +70,33 @@ export function isNativeApp(): boolean {
   return isCapacitor;
 }
 
+export async function appleSignIn(identityToken: string, fullName?: string): Promise<{ token: string }> {
+  const response = await fetch(`${API_URL}/auth/apple/callback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identity_token: identityToken, full_name: fullName }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Apple sign-in failed");
+  }
+
+  return response.json();
+}
+
+export async function deleteAccount(token: string): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/account`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Failed to delete account");
+  }
+}
+
 // Events API
 
 export interface Event {

@@ -4,21 +4,24 @@ import base64
 import json
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from jose import jwt as jose_jwt, JWTError
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import create_access_token, get_current_user
-from app.models import User
+from app.models import User, Memory, Photo, Event, EventMember
 from app.schemas.auth import UserResponse, TokenResponse
+from app.services.s3 import s3_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+APPLE_KEYS_URL = "https://appleid.apple.com/auth/keys"
 
 
 @router.get("/google/login")
@@ -143,6 +146,129 @@ async def google_callback(
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get current authenticated user."""
     return current_user
+
+
+@router.post("/apple/callback")
+async def apple_callback(
+    identity_token: str = Body(..., embed=True),
+    full_name: Optional[str] = Body(None, embed=True),
+    db: Session = Depends(get_db),
+):
+    """Handle Sign in with Apple. Validates the identity token and creates/logs in the user."""
+    try:
+        # Fetch Apple's public keys
+        async with httpx.AsyncClient() as client:
+            keys_response = await client.get(APPLE_KEYS_URL)
+            apple_keys = keys_response.json()
+        
+        # Decode the token header to find the right key
+        header = jose_jwt.get_unverified_header(identity_token)
+        
+        # Find the matching key
+        matching_key = None
+        for key in apple_keys["keys"]:
+            if key["kid"] == header["kid"]:
+                matching_key = key
+                break
+        
+        if not matching_key:
+            raise HTTPException(status_code=400, detail="Invalid Apple token: no matching key")
+        
+        # Construct the RSA public key
+        from jose import jwk
+        public_key = jwk.construct(matching_key)
+        
+        # Decode and verify the token
+        payload = jose_jwt.decode(
+            identity_token,
+            public_key,
+            algorithms=["RS256"],
+            audience=settings.APPLE_CLIENT_ID,
+            issuer="https://appleid.apple.com",
+        )
+        
+        apple_user_id = payload["sub"]
+        email = payload.get("email")
+        
+    except JWTError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid Apple token: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Apple sign-in failed: {str(e)}")
+    
+    # Find user by apple_id
+    user = db.query(User).filter(User.apple_id == apple_user_id).first()
+    
+    if not user and email:
+        # Check if user exists with this email (e.g., signed up with Google before)
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            user.apple_id = apple_user_id
+            db.commit()
+    
+    if not user:
+        # Create new user
+        user_name = full_name or (email.split("@")[0] if email else "Apple User")
+        user = User(
+            email=email or f"{apple_user_id}@privaterelay.appleid.com",
+            name=user_name,
+            apple_id=apple_user_id,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    # Create JWT token
+    jwt_token = create_access_token(user.id)
+    return {"token": jwt_token}
+
+
+@router.delete("/account")
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete the current user's account and all associated data."""
+    user_id = current_user.id
+    
+    # Delete user's memories and their S3 files
+    memories = db.query(Memory).filter(Memory.user_id == user_id).all()
+    for memory in memories:
+        try:
+            s3_service.delete_photo(memory.s3_key)
+        except Exception:
+            pass
+    db.query(Memory).filter(Memory.user_id == user_id).delete()
+    
+    # Delete user's uploaded photos and their S3 files
+    photos = db.query(Photo).filter(Photo.uploaded_by == user_id).all()
+    for photo in photos:
+        try:
+            s3_service.delete_photo(photo.s3_key)
+        except Exception:
+            pass
+    db.query(Photo).filter(Photo.uploaded_by == user_id).delete()
+    
+    # Delete events created by user (and their remaining photos/members)
+    events = db.query(Event).filter(Event.created_by == user_id).all()
+    for event in events:
+        remaining_photos = db.query(Photo).filter(Photo.event_id == event.id).all()
+        for photo in remaining_photos:
+            try:
+                s3_service.delete_photo(photo.s3_key)
+            except Exception:
+                pass
+        db.query(Photo).filter(Photo.event_id == event.id).delete()
+        db.query(EventMember).filter(EventMember.event_id == event.id).delete()
+        db.delete(event)
+    
+    # Remove user from events they're a member of (but didn't create)
+    db.query(EventMember).filter(EventMember.user_id == user_id).delete()
+    
+    # Delete the user
+    db.delete(current_user)
+    db.commit()
+    
+    return {"message": "Account deleted successfully"}
 
 
 @router.get("/dev/login")

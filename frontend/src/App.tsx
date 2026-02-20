@@ -14,7 +14,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BottomNav } from "./components/BottomNav";
 
 function App() {
-  const { user, loading, token, login, logout, startGoogleLogin } = useAuth();
+  const { user, loading, token, login, logout, startGoogleLogin, startAppleLogin } = useAuth();
 
   return (
     <ErrorBoundary>
@@ -24,7 +24,7 @@ function App() {
           <Routes>
           <Route
             path="/"
-            element={<Home user={user} loading={loading} onLogout={logout} onLogin={startGoogleLogin} token={token} />}
+            element={<Home user={user} loading={loading} onLogout={logout} onLogin={startGoogleLogin} onAppleLogin={startAppleLogin} token={token} />}
           />
             <Route
               path="/auth/callback"

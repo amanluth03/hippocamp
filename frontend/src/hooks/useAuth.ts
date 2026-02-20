@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { User, getCurrentUser, getGoogleLoginUrl, isNativeApp } from "../services/api";
+import { User, getCurrentUser, getGoogleLoginUrl, isNativeApp, appleSignIn } from "../services/api";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { App, URLOpenListenerEvent } from "@capacitor/app";
 import { SharedAuthBridge } from "../utils/SharedAuthBridge";
+import { SignInWithApple, SignInWithAppleOptions, SignInWithAppleResponse } from "@capacitor-community/apple-sign-in";
 
 const TOKEN_KEY = "hippocamp_token";
 
@@ -115,6 +116,29 @@ export function useAuth() {
     }
   }, []);
 
+  const startAppleLogin = useCallback(async () => {
+    try {
+      const options: SignInWithAppleOptions = {
+        clientId: "net.thehippocampus.app",
+        redirectURI: "https://thehippocampus.net",
+        scopes: "email name",
+      };
+      
+      const result: SignInWithAppleResponse = await SignInWithApple.authorize(options);
+      
+      if (result.response?.identityToken) {
+        const fullName = [result.response.givenName, result.response.familyName]
+          .filter(Boolean)
+          .join(" ") || undefined;
+        
+        const response = await appleSignIn(result.response.identityToken, fullName);
+        login(response.token);
+      }
+    } catch (error) {
+      console.error("Apple Sign In failed:", error);
+    }
+  }, [login]);
+
   return { 
     user, 
     loading, 
@@ -122,6 +146,7 @@ export function useAuth() {
     login, 
     logout, 
     startGoogleLogin,
+    startAppleLogin,
     isAuthenticated: !!user 
   };
 }
