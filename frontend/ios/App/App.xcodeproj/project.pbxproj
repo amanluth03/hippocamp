@@ -15,6 +15,7 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		72BEC3182F492A20001C91C1 /* AppleSignInPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72BEC3172F492A20001C91C1 /* AppleSignInPlugin.swift */; };
 		72DEE8A62F26E64C00FD788E /* SharedAuthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DEE8A52F26E64C00FD788E /* SharedAuthPlugin.swift */; };
 		72DEE8A82F26E65200FD788E /* ShareExtension-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 72DEE8A72F26E65200FD788E /* ShareExtension-Info.plist */; };
 		72DEE8AD2F26E69A00FD788E /* SETUP_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 72DEE8AC2F26E69A00FD788E /* SETUP_GUIDE.md */; };
@@ -55,6 +56,7 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
+		72BEC3172F492A20001C91C1 /* AppleSignInPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInPlugin.swift; sourceTree = "<group>"; };
 		72DEE8A52F26E64C00FD788E /* SharedAuthPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAuthPlugin.swift; sourceTree = "<group>"; };
 		72DEE8A72F26E65200FD788E /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ShareExtension-Info.plist"; sourceTree = "<group>"; };
 		72DEE8A92F26E65600FD788E /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				72DEE8AA2F26E65A00FD788E /* App.entitlements */,
 				72DEE8AB2F26E66C00FD788E /* SharedAuthBridge.ts */,
 				72DEE8AC2F26E69A00FD788E /* SETUP_GUIDE.md */,
+				72BEC3172F492A20001C91C1 /* AppleSignInPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -264,6 +267,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				72DEE8A62F26E64C00FD788E /* SharedAuthPlugin.swift in Sources */,
+				72BEC3182F492A20001C91C1 /* AppleSignInPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -422,7 +426,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = Y66X2X9LLT;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -450,7 +454,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = Y66X2X9LLT;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;

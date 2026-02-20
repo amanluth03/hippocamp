@@ -1,10 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
 import { User, getCurrentUser, getGoogleLoginUrl, isNativeApp, appleSignIn } from "../services/api";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { App, URLOpenListenerEvent } from "@capacitor/app";
 import { SharedAuthBridge } from "../utils/SharedAuthBridge";
-import { SignInWithApple, SignInWithAppleOptions, SignInWithAppleResponse } from "@capacitor-community/apple-sign-in";
+
+interface AppleSignInPlugin {
+  authorize(): Promise<{
+    identityToken: string;
+    user: string;
+    email?: string;
+    givenName?: string;
+    familyName?: string;
+  }>;
+}
+
+const AppleSignIn = registerPlugin<AppleSignInPlugin>("AppleSignIn");
 
 const TOKEN_KEY = "hippocamp_token";
 
@@ -117,21 +128,20 @@ export function useAuth() {
   }, []);
 
   const startAppleLogin = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) {
+      console.log("Apple Sign In is only available on iOS");
+      return;
+    }
+    
     try {
-      const options: SignInWithAppleOptions = {
-        clientId: "net.thehippocampus.app",
-        redirectURI: "https://thehippocampus.net",
-        scopes: "email name",
-      };
+      const result = await AppleSignIn.authorize();
       
-      const result: SignInWithAppleResponse = await SignInWithApple.authorize(options);
-      
-      if (result.response?.identityToken) {
-        const fullName = [result.response.givenName, result.response.familyName]
+      if (result.identityToken) {
+        const fullName = [result.givenName, result.familyName]
           .filter(Boolean)
           .join(" ") || undefined;
         
-        const response = await appleSignIn(result.response.identityToken, fullName);
+        const response = await appleSignIn(result.identityToken, fullName);
         login(response.token);
       }
     } catch (error) {
