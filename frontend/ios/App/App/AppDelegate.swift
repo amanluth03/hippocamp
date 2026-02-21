@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import WebKit
+import AuthenticationServices
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -8,6 +9,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Register local Capacitor plugins after bridge is ready
+        DispatchQueue.main.async {
+            if let bridge = (self.window?.rootViewController as? CAPBridgeViewController)?.bridge {
+                bridge.registerPluginInstance(AppleSignInPlugin())
+                print("AppDelegate: ✅ AppleSignInPlugin registered")
+            }
+        }
         return true
     }
 

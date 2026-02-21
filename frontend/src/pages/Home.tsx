@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, getFeed, FeedItem, searchPhotos, SearchResultItem, SearchInterpretation, deleteAccount } from "../services/api";
+import { User, getFeed, FeedItem, searchPhotos, SearchResultItem, SearchInterpretation, deleteAccount, isNativeApp } from "../services/api";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { Spinner } from "../components/Spinner";
 import { PhotoSkeleton } from "../components/PhotoSkeleton";
@@ -98,7 +98,7 @@ export function Home({ user, loading, onLogout, onLogin, onAppleLogin, token }: 
               </svg>
               Sign in with Google
             </button>
-            {onAppleLogin && (
+            {isNativeApp() && onAppleLogin && (
               <button
                 onClick={onAppleLogin}
                 className="w-64 bg-black text-white font-semibold py-4 px-8 rounded-full text-lg shadow-lg flex items-center justify-center gap-3 hover:bg-gray-900 transition-colors"
