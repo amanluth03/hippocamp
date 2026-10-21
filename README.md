@@ -1,5 +1,6 @@
 # Hippo Campus 🦛
 thehippocampus.net
+
 A photo sharing and memory saving application for capturing and reliving event moments.
 
 ## Features
